@@ -2,7 +2,7 @@
 Project for a low-cost weather satellite receive station for STEM/STEAM education.
 
 ## Origins
-This is just the beginning source files. Right now I grab raw data from the NOAA 15, 18, and 19 satellites when I can but the data with the basic antenna I am using is marginal at best. Mostly noise. There is a wave (`*.wav`) file from an APT reception project of [Mark Roland's](http://markroland.com/portfolio/weather-satellite-imaging). I use this file or practice in decoding from a signal that is already FM demodulated and sampled at 11.025 KHz.
+This is just the beginning source files. Right now I grab raw data from the NOAA 15, 18, and 19 satellites when I can but the data with the basic antenna I am using is marginal at best. Mostly noise. There is a wave (`*.wav`) file from an APT reception project of [Mark Roland's](http://markroland.com/portfolio/weather-satellite-imaging). I use this file for practice in decoding from a signal that is already FM demodulated and sampled at 11.025 KHz.
 
 ## Contents
 Right now, the contents are pretty bare but over time look for more source files, example/test files, schematics, mechanical design files, and more.
