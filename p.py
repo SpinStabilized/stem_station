@@ -4,6 +4,9 @@ import numpy
 import os.path
 import struct
 
+from numpy.fft import fft, ifft
+from numpy import conj
+#from numpy.ndarray import astype
 from itertools import zip_longest
 from PIL import Image, ImageOps
 
@@ -52,10 +55,24 @@ new_range = (0, 255)
 for i, pixel in enumerate(pixels):
 	pixels[i] = abs(int(rescale(pixel, old_range, new_range)))
 
+pixels = pixels[0:pixels_per_line * lines]
+
+sync_pixels = list(pixels)
+sync_signal = [0, 0, 255, 255] * (len(pixels) // 4)
+
+pad = [0] * len(pixels)
+sync_pixels.extend(pad)
+sync_signal.extend(pad)
+xcor = ifft(fft(sync_pixels)) * conj(fft(sync_signal))
+xcor = xcor.astype(int)
+
+with open('bar.bin', 'wb') as corr_data:
+    corr_data.write(bytes(xcor))
+
 output_file = input_file_directory + input_filename_base + '.png'
 	
 print('Generating PNG Image')
 image = Image.new(GRAYSCALE, (pixels_per_line, lines))
-image.putdata(pixels[0:pixels_per_line * lines])
+image.putdata(pixels)
 image = ImageOps.equalize(image.rotate(180))
 image.save(output_file)
