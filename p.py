@@ -58,11 +58,10 @@ for i, pixel in enumerate(pixels):
 pixels = pixels[0:pixels_per_line * lines]
 
 sync_pixels = list(pixels)
-sync_signal = [0, 0, 255, 255] * (len(pixels) // 4)
+sync_signal = [0, 0, 255, 255] * 7
 
-pad = [0] * len(pixels)
-sync_pixels.extend(pad)
-sync_signal.extend(pad)
+sync_pixels.extend([0] * len(pixels))
+sync_signal.extend([0] * (len(sync_pixels) - len(sync_signal)))
 xcor = ifft(fft(sync_pixels)) * conj(fft(sync_signal))
 xcor = xcor.astype(int)
 
