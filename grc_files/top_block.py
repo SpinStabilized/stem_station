@@ -2,7 +2,7 @@
 ##################################################
 # GNU Radio Python Flow Graph
 # Title: Top Block
-# Generated: Mon Nov 30 18:34:10 2015
+# Generated: Tue Dec  1 21:22:18 2015
 ##################################################
 
 if __name__ == '__main__':
@@ -32,15 +32,12 @@ class top_block(grc_wxgui.top_block_gui):
 
     def __init__(self):
         grc_wxgui.top_block_gui.__init__(self, title="Top Block")
-        _icon_path = "/usr/share/icons/hicolor/32x32/apps/gnuradio-grc.png"
-        self.SetIcon(wx.Icon(_icon_path, wx.BITMAP_TYPE_ANY))
 
         ##################################################
         # Variables
         ##################################################
         self.samp_rate = samp_rate = 11025
         self.baud_rate = baud_rate = 4160
-        self.am_carrier = am_carrier = 2400
 
         ##################################################
         # Blocks
@@ -51,7 +48,7 @@ class top_block(grc_wxgui.top_block_gui):
         	sample_rate=baud_rate,
         	v_scale=0,
         	v_offset=0,
-        	t_scale=0,
+        	t_scale=0.010,
         	ac_couple=False,
         	xy_mode=False,
         	num_inputs=1,
@@ -65,12 +62,12 @@ class top_block(grc_wxgui.top_block_gui):
                 taps=None,
                 fractional_bw=None,
         )
-        self.low_pass_filter_1 = filter.interp_fir_filter_fff(1, firdes.low_pass(
-        	1, samp_rate, 1100, 50, firdes.WIN_BLACKMAN, 6.76))
-        self.fm_demodulated_source = blocks.wavfile_source("/home/brian/stem_station/sample_files/N18_4827.wav", False)
+        self.low_pass_filter_1 = filter.fir_filter_fff(1, firdes.low_pass(
+        	1, samp_rate, 1.1e3, 20, firdes.WIN_BLACKMAN, 6.76))
+        self.hilbert_fc_0 = filter.hilbert_fc(65, firdes.WIN_HAMMING, 6.76)
+        self.fm_demodulated_source = blocks.wavfile_source("/Users/bjmclaug/source/stem_station/sample_files/N18_4827.wav", False)
         self.blocks_throttle_0 = blocks.throttle(gr.sizeof_float*1, samp_rate,True)
-        self.blocks_float_to_complex_0 = blocks.float_to_complex(1)
-        self.blocks_file_sink_0 = blocks.file_sink(gr.sizeof_float*1, "/home/brian/stem_station/raw.dat", False)
+        self.blocks_file_sink_0 = blocks.file_sink(gr.sizeof_float*1, "/Users/bjmclaug/source/stem_station/raw.dat", False)
         self.blocks_file_sink_0.set_unbuffered(False)
         self.blocks_complex_to_mag_0 = blocks.complex_to_mag(1)
         self.blocks_abs_xx_0 = blocks.abs_ff(1)
@@ -80,10 +77,10 @@ class top_block(grc_wxgui.top_block_gui):
         ##################################################
         self.connect((self.blocks_abs_xx_0, 0), (self.low_pass_filter_1, 0))    
         self.connect((self.blocks_complex_to_mag_0, 0), (self.rational_resampler_xxx_0, 0))    
-        self.connect((self.blocks_float_to_complex_0, 0), (self.blocks_complex_to_mag_0, 0))    
         self.connect((self.blocks_throttle_0, 0), (self.blocks_abs_xx_0, 0))    
         self.connect((self.fm_demodulated_source, 0), (self.blocks_throttle_0, 0))    
-        self.connect((self.low_pass_filter_1, 0), (self.blocks_float_to_complex_0, 0))    
+        self.connect((self.hilbert_fc_0, 0), (self.blocks_complex_to_mag_0, 0))    
+        self.connect((self.low_pass_filter_1, 0), (self.hilbert_fc_0, 0))    
         self.connect((self.rational_resampler_xxx_0, 0), (self.blocks_file_sink_0, 0))    
         self.connect((self.rational_resampler_xxx_0, 0), (self.wxgui_scopesink2_0, 0))    
 
@@ -94,7 +91,7 @@ class top_block(grc_wxgui.top_block_gui):
     def set_samp_rate(self, samp_rate):
         self.samp_rate = samp_rate
         self.blocks_throttle_0.set_sample_rate(self.samp_rate)
-        self.low_pass_filter_1.set_taps(firdes.low_pass(1, self.samp_rate, 1100, 50, firdes.WIN_BLACKMAN, 6.76))
+        self.low_pass_filter_1.set_taps(firdes.low_pass(1, self.samp_rate, 1.1e3, 20, firdes.WIN_BLACKMAN, 6.76))
 
     def get_baud_rate(self):
         return self.baud_rate
@@ -102,12 +99,6 @@ class top_block(grc_wxgui.top_block_gui):
     def set_baud_rate(self, baud_rate):
         self.baud_rate = baud_rate
         self.wxgui_scopesink2_0.set_sample_rate(self.baud_rate)
-
-    def get_am_carrier(self):
-        return self.am_carrier
-
-    def set_am_carrier(self, am_carrier):
-        self.am_carrier = am_carrier
 
 
 if __name__ == '__main__':
