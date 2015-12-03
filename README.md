@@ -28,10 +28,14 @@ A running list of STEM topics covered by working on this project. Need to develo
     + Calculus
 
 ## To-Do List (In no particular order)
--[ ] Figure out a way to find the sync bursts in the raw data file. I'm missing something and I think it should be easier than I am making it.
--[ ] Write a scheduling system that will track satellites and configure/execute a pass. Seems to be the occasional conflict between NOAA-15 and NOAA-18 so some kind of deconfliction would be good.
--[ ] Once the APT system is mastered, consider the METEOR series.
--[ ] Develop build instructions for a QFH antenna.
+- [ ] Figure out a way to find the sync bursts in the raw data file. I'm missing something and I think it should be easier than I am making it.
+- [ ] Write a scheduling system that will track satellites and configure/execute a pass. Seems to be the occasional conflict between NOAA-15 and NOAA-18 so some kind of deconfliction would be good.
+- [ ] Once the APT system is mastered, consider additional satellites:
+  - [ ] METEOR (LRPT Generic)
+  - [ ] GOES
+  - [ ] HRPT Satellites
+- [ ] Develop build instructions for a QFH antenna.
+- [ ] Add the ability to watch for transmissions from the ISS
 
 ## Acknowledgements
 As with any project, I will be standing on the shoulders of giants
