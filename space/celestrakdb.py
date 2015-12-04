@@ -1,10 +1,22 @@
 '''
-.. module:: celestrakdb
-   :platform: Unix, OS X, Windows
-   :synopsis: Interface for managing TLE data.
+Objects for intereacting with the `Celestrak <http://celestrak.com/>`_
+online database.
 
-.. moduleauthor:: Brian McLaughlin <bjmclaughlin@gmail.com>
+This module provides two objects for easy collection of data on satellite Two
+Line Elements (TLE) from the `Celestrak <http://celestrak.com/>`_ database. The
+data in a TLE provides all of the information necessary to determine a
+satellite's orbit properties. A TLE is actually three lines with the first
+line containing the satellite name. The remaining two lines contain other
+identifying information and the orbital parameters.
 
+The functions provided in this module do not parse this TLE data, only provides
+a retrival from the online database and easy access to the lines for processing
+in other contexts.
+
+Classes
+-------
+- `Celestrak` -- An object that stores the requested satellite TLE items
+- `TLEItem` -- An object that stores individual TLE information
 
 '''
 
@@ -14,13 +26,37 @@ from datetime import datetime
 
 
 class Celestrak(object):
-    '''Object to interface with TLE raw datafiles.'''
+    '''Object to interface with TLE raw datafiles.
+
+    This is the main object for retrieving the TLE files and storing the
+    requested TLE objects.
+
+    Parameters
+    ----------
+    dataset : list of strings, optional
+        A list of datasets to use in searching for a specific satellite. Useful
+        if the satellite dataset is already known. To search all known datasets
+        leave the parameter out or provide an empty list. For example,
+        ```['amateur', 'noaa']```.
+    satellites : list of strings, optional
+        A list of specific satellites to find by name such as
+        ```['NOAA 18', 'NOAA 19']```.
+
+    Properties
+    ----------
+    dataset : list of strings
+        The list of datasets to search. This allows for a retrieval of the
+        datasets being used in the search as well as updating the datasets
+        searched. Note - If the datasets are changed, run the ``update_tle()``
+        method to update the TLE data.
+
+    '''
 
     '''The base URL for the Celestrak datasets.'''
-    BASE_URL = 'http://www.celestrak.com/NORAD/elements/'
+    base_url = 'http://www.celestrak.com/NORAD/elements/'
 
     '''The list of known datasets hosted on Celestrak.'''
-    DATASETS = ['amateur',
+    datasets = ['amateur',
                 'argos',
                 'beidou',
                 'cubesat',
@@ -63,26 +99,26 @@ class Celestrak(object):
                 '2012-044']
 
     '''Encoding for the Celestrak data files.'''
-    DATASET_ENCODING = 'ASCII'
+    dataset_encoding = 'ASCII'
 
     '''Number of text lines per TLE object.'''
-    LINES_PER_OBJECT = 3
+    lines_per_object = 3
 
     '''Define the TLE input file line-ending.'''
-    TLE_FILE_LINE_ENDING = '\r\n'
+    tle_file_line_ending = '\r\n'
 
     def __init__(self, dataset=[], satellites=[]):
         '''Celetrak DB object.
 
-        :param dataset: Celestrak datasets to use. See :func:`Celestrak.dataset`
+        :param dataset: datasets to use. See :func:`Celestrak.dataset`
         :type dataset:  :class:`list`
-        :param satellites: Satellite names to filter on. See :func:`Celestrak.satellites`
+        :param satellites: Satellite names. See :func:`Celestrak.satellites`
         :type satellites: :class:`list`
 
         '''
 
         if not dataset:
-            self.dataset = self.DATASETS
+            self.dataset = self.datasets
         else:
             self.dataset = dataset
 
@@ -102,6 +138,7 @@ class Celestrak(object):
         :type: list
         '''
         return self._dataset
+
     @dataset.setter
     def dataset(self, value):
         self._dataset = value
@@ -116,6 +153,7 @@ class Celestrak(object):
         :type: list
         '''
         return self._satellites
+
     @satellites.setter
     def satellites(self, value):
         self._satellites = value
@@ -137,6 +175,7 @@ class Celestrak(object):
         :type: :class:`datetime.datetime`
         '''
         return self._last_update
+
     @last_update.setter
     def last_update(self, value):
         self._last_update = value
@@ -168,36 +207,35 @@ class Celestrak(object):
         for data in self.dataset:
 
             # Format the URL for the dataset to retrieve
-            url = '{}{}.txt'.format(self.BASE_URL, data)
+            url = '{}{}.txt'.format(self.base_url, data)
             tle_raw = None
 
             try:
                 # retireve the ephemeris file data
                 with urllib.request.urlopen(url) as ephemeris_file:
                     tle_raw = ephemeris_file.read().decode(
-                        self.DATASET_ENCODING).split(self.TLE_FILE_LINE_ENDING)
+                        self.dataset_encoding).split(self.tle_file_line_ending)
 
             except urllib.request.URLError:
                 pass  # TODO: Add better error handling
 
             # check for and remove any extra lines at the end
             tle_raw = tle_raw[:(len(tle_raw) -
-                                (len(tle_raw) % self.LINES_PER_OBJECT))]
+                                (len(tle_raw) % self.lines_per_object))]
 
             # break the tle data into 3 line groups & create TLEItem Objects
             self._tle.extend([TLEItem(tle_raw[index].strip(),
                                       tle_raw[index+1],
                                       tle_raw[index+2],
                                       dataset=data)
-                                      for index in list(range(0,
-                                                        len(tle_raw), 3))])
+                             for index in list(range(0, len(tle_raw), 3))])
 
         # If we received a list of satellites, filter on that set
         if self.satellites:
             self._tle = [tle_item for tle_item in self.tle
-                            if (tle_item.name in self.satellites) or
-                               (tle_item.alt  in self.satellites) or
-                               (tle_item.raw_name in self.satellites)]
+                         if (tle_item.name in self.satellites) or
+                            (tle_item.alt in self.satellites) or
+                            (tle_item.raw_name in self.satellites)]
 
         self._last_update = datetime.utcnow()
 
@@ -239,7 +277,8 @@ class TLEItem(object):
             name_information['status'] = ''
 
         else:
-            name_information = re.match(TLEItem.NAME_REGEX, raw_name).groupdict()
+            name_information = re.match(
+                                    TLEItem.NAME_REGEX, raw_name).groupdict()
             if not name_information['name']:
                 name_information['name'] = ''
             else:
@@ -260,6 +299,7 @@ class TLEItem(object):
     @property
     def raw_name(self):
         return self._raw_name
+
     @raw_name.setter
     def raw_name(self, value):
         self._raw_name = value
@@ -267,6 +307,7 @@ class TLEItem(object):
     @property
     def name(self):
         return self._name
+
     @name.setter
     def name(self, value):
         self._name = value
@@ -274,6 +315,7 @@ class TLEItem(object):
     @property
     def alt(self):
         return self._alt
+
     @alt.setter
     def alt(self, value):
         self._alt = value
@@ -281,14 +323,15 @@ class TLEItem(object):
     @property
     def status(self):
         return self._status
+
     @status.setter
     def status(self, value):
         self._status = value
 
-
     @property
     def tle1(self):
         return self._tle1
+
     @tle1.setter
     def tle1(self, value):
         self._tle1 = value
@@ -296,6 +339,7 @@ class TLEItem(object):
     @property
     def tle2(self):
         return self._tle2
+
     @tle2.setter
     def tle2(self, value):
         self._tle2 = value
@@ -303,6 +347,7 @@ class TLEItem(object):
     @property
     def dataset(self):
         return self._dataset
+
     @dataset.setter
     def dataset(self, value):
         self._dataset = value
