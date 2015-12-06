@@ -21,8 +21,8 @@
   ],
   "ground_station": {
     "name":"Home",
-    "lat":38.994260,
-    "lon":-76.849292,
-    "elevation":45
+    "lat":39.209599,
+    "lon":-76.890224,
+    "elevation":135
   }
 }
