@@ -10,8 +10,8 @@ from PIL import Image, ImageOps
 #from scipy.ndimage import gaussian_filter
 
 from itertools import tee, izip_longest
-# from gnuradio.blocks import parse_file_metadata
-import parse_file_metadata
+from gnuradio.blocks import parse_file_metadata
+# import parse_file_metadata
 import pmt
 import sys
 

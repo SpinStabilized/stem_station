@@ -178,6 +178,61 @@
     </param>
   </block>
   <block>
+    <key>analog_am_demod_cf</key>
+    <param>
+      <key>audio_decim</key>
+      <value>factor_of_baud</value>
+    </param>
+    <param>
+      <key>audio_pass</key>
+      <value>5000</value>
+    </param>
+    <param>
+      <key>audio_stop</key>
+      <value>5500</value>
+    </param>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>chan_rate</key>
+      <value>demod_rate</value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>affinity</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(744, 40)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>analog_am_demod_cf_0</value>
+    </param>
+    <param>
+      <key>maxoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>minoutbuf</key>
+      <value>0</value>
+    </param>
+  </block>
+  <block>
     <key>blocks_add_xx</key>
     <param>
       <key>alias</key>
@@ -244,11 +299,11 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>True</value>
+      <value>0</value>
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(568, 142)</value>
+      <value>(616, 142)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -291,7 +346,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>True</value>
+      <value>1</value>
     </param>
     <param>
       <key>extra_dict</key>
@@ -774,6 +829,65 @@
     </param>
   </block>
   <block>
+    <key>freq_xlating_fir_filter_xxx</key>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>center_freq</key>
+      <value>2400</value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>affinity</key>
+      <value></value>
+    </param>
+    <param>
+      <key>decim</key>
+      <value>1</value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(528, 38)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>freq_xlating_fir_filter_xxx_0</value>
+    </param>
+    <param>
+      <key>maxoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>minoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>samp_rate</key>
+      <value>demod_rate</value>
+    </param>
+    <param>
+      <key>taps</key>
+      <value>firdes.low_pass(500, demod_rate, 1180, 100)</value>
+    </param>
+    <param>
+      <key>type</key>
+      <value>fcf</value>
+    </param>
+  </block>
+  <block>
     <key>hilbert_fc</key>
     <param>
       <key>beta</key>
@@ -793,11 +907,11 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>1</value>
+      <value>0</value>
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(448, 142)</value>
+      <value>(496, 142)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -864,7 +978,7 @@
     </param>
     <param>
       <key>zmax</key>
-      <value>0.8</value>
+      <value>115</value>
     </param>
     <param>
       <key>zmin</key>
@@ -1379,7 +1493,7 @@
     </param>
     <param>
       <key>ymax</key>
-      <value>1</value>
+      <value>112</value>
     </param>
     <param>
       <key>ymin</key>
@@ -1406,7 +1520,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>1</value>
+      <value>0</value>
     </param>
     <param>
       <key>fbw</key>
@@ -1414,7 +1528,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(704, 128)</value>
+      <value>(760, 128)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1516,7 +1630,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(848, 142)</value>
+      <value>(976, 142)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1640,6 +1754,12 @@
     </param>
   </block>
   <connection>
+    <source_block_id>analog_am_demod_cf_0</source_block_id>
+    <sink_block_id>virtual_sink_0_0</sink_block_id>
+    <source_key>0</source_key>
+    <sink_key>0</sink_key>
+  </connection>
+  <connection>
     <source_block_id>blocks_add_xx_0</source_block_id>
     <sink_block_id>blocks_file_meta_sink_0</sink_block_id>
     <source_key>0</source_key>
@@ -1718,6 +1838,12 @@
     <sink_key>0</sink_key>
   </connection>
   <connection>
+    <source_block_id>freq_xlating_fir_filter_xxx_0</source_block_id>
+    <sink_block_id>analog_am_demod_cf_0</sink_block_id>
+    <source_key>0</source_key>
+    <sink_key>0</sink_key>
+  </connection>
+  <connection>
     <source_block_id>hilbert_fc_0</source_block_id>
     <sink_block_id>blocks_complex_to_mag_squared_0</sink_block_id>
     <source_key>0</source_key>
@@ -1726,6 +1852,12 @@
   <connection>
     <source_block_id>rational_resampler_xxx_0</source_block_id>
     <sink_block_id>virtual_sink_0_0</sink_block_id>
+    <source_key>0</source_key>
+    <sink_key>0</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>rational_resampler_xxx_1</source_block_id>
+    <sink_block_id>freq_xlating_fir_filter_xxx_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>
