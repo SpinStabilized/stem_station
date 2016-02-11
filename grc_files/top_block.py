@@ -2,7 +2,7 @@
 ##################################################
 # GNU Radio Python Flow Graph
 # Title: Top Block
-# Generated: Sun Feb  7 11:32:05 2016
+# Generated: Thu Feb 11 11:05:54 2016
 ##################################################
 
 if __name__ == '__main__':
@@ -21,6 +21,7 @@ from gnuradio import digital
 from gnuradio import eng_notation
 from gnuradio import filter
 from gnuradio import gr
+from gnuradio import gr, blocks
 from gnuradio import qtgui
 from gnuradio.eng_option import eng_option
 from gnuradio.filter import firdes
@@ -57,36 +58,44 @@ class top_block(gr.top_block, Qt.QWidget):
         ##################################################
         # Variables
         ##################################################
-        self.samp_rate = samp_rate = 11025
+        self.factor_of_baud = factor_of_baud = 4
         self.baud_rate = baud_rate = 4160
+        self.samp_rate = samp_rate = 11025
+        self.demod_rate = demod_rate = baud_rate * factor_of_baud
 
         ##################################################
         # Blocks
         ##################################################
-        self.rational_resampler_xxx_0 = filter.rational_resampler_fff(
-                interpolation=baud_rate,
+        self.rational_resampler_xxx_1 = filter.rational_resampler_fff(
+                interpolation=demod_rate,
                 decimation=samp_rate,
                 taps=None,
                 fractional_bw=None,
         )
+        self.rational_resampler_xxx_0 = filter.rational_resampler_fff(
+                interpolation=baud_rate,
+                decimation=demod_rate,
+                taps=None,
+                fractional_bw=None,
+        )
         self.qtgui_time_sink_x_0 = qtgui.time_sink_f(
-        	4160 // 2, #size
+        	baud_rate / 2, #size
         	baud_rate, #samp_rate
-        	'APT Analog Magnitude Signal', #name
+        	'APT Full Line', #name
         	1 #number of inputs
         )
         self.qtgui_time_sink_x_0.set_update_time(0.10)
-        self.qtgui_time_sink_x_0.set_y_axis(-0.5, 1.5)
+        self.qtgui_time_sink_x_0.set_y_axis(0, 1)
         
         self.qtgui_time_sink_x_0.set_y_label("Amplitude", "")
         
         self.qtgui_time_sink_x_0.enable_tags(-1, True)
-        self.qtgui_time_sink_x_0.set_trigger_mode(qtgui.TRIG_MODE_FREE, qtgui.TRIG_SLOPE_POS, 0.0, 0, 0, '')
+        self.qtgui_time_sink_x_0.set_trigger_mode(qtgui.TRIG_MODE_FREE, qtgui.TRIG_SLOPE_POS, 0.0, 0, 0, "")
         self.qtgui_time_sink_x_0.enable_autoscale(False)
         self.qtgui_time_sink_x_0.enable_grid(False)
         self.qtgui_time_sink_x_0.enable_control_panel(False)
         
-        if not True:
+        if not False:
           self.qtgui_time_sink_x_0.disable_legend()
         
         labels = ["", "", "", "", "",
@@ -115,45 +124,93 @@ class top_block(gr.top_block, Qt.QWidget):
         
         self._qtgui_time_sink_x_0_win = sip.wrapinstance(self.qtgui_time_sink_x_0.pyqwidget(), Qt.QWidget)
         self.top_layout.addWidget(self._qtgui_time_sink_x_0_win)
-        self.low_pass_filter_0 = filter.fir_filter_ccf(1, firdes.low_pass(
-        	1, samp_rate, 1180, 100, firdes.WIN_BLACKMAN, 6.76))
-        self.hilbert_fc_0 = filter.hilbert_fc(65, firdes.WIN_BLACKMAN_hARRIS, 0.5)
-        self.fm_demodulated_source = blocks.wavfile_source("/home/brian/stem_station/sample_files/N18_4827.wav", False)
-        self.digital_correlate_access_code_tag_bb_0 = digital.correlate_access_code_tag_bb("001100110011001100110011001100000000", 1, "SyncA")
-        self.digital_binary_slicer_fb_0 = digital.binary_slicer_fb()
-        self.blocks_uchar_to_float_0 = blocks.uchar_to_float()
+        self.qtgui_time_raster_sink_x_0 = qtgui.time_raster_sink_f(
+        	samp_rate,
+        	128,
+        	int(baud_rate / 2),
+        	([]),
+        	([]),
+        	"",
+        	1,
+        	)
+        
+        self.qtgui_time_raster_sink_x_0.set_update_time(0.5)
+        self.qtgui_time_raster_sink_x_0.set_intensity_range(0, 0.8)
+        self.qtgui_time_raster_sink_x_0.enable_grid(False)
+        
+        labels = ["", "", "", "", "",
+                  "", "", "", "", ""]
+        colors = [1, 0, 0, 0, 0,
+                  0, 0, 0, 0, 0]
+        alphas = [1.0, 1.0, 1.0, 1.0, 1.0,
+                  1.0, 1.0, 1.0, 1.0, 1.0]
+        for i in xrange(1):
+            if len(labels[i]) == 0:
+                self.qtgui_time_raster_sink_x_0.set_line_label(i, "Data {0}".format(i))
+            else:
+                self.qtgui_time_raster_sink_x_0.set_line_label(i, labels[i])
+            self.qtgui_time_raster_sink_x_0.set_color_map(i, colors[i])
+            self.qtgui_time_raster_sink_x_0.set_line_alpha(i, alphas[i])
+        
+        self._qtgui_time_raster_sink_x_0_win = sip.wrapinstance(self.qtgui_time_raster_sink_x_0.pyqwidget(), Qt.QWidget)
+        self.top_layout.addWidget(self._qtgui_time_raster_sink_x_0_win)
+        self.hilbert_fc_0 = filter.hilbert_fc(65, firdes.WIN_HAMMING, 6.76)
+        self.fm_demodulated_source = blocks.wavfile_source("/Users/bjmclaug/source/stem_station/sample_files/N18_4827.wav", False)
+        self.digital_correlate_access_code_tag_bb_0_0 = digital.correlate_access_code_tag_bb('00' + ('0011' * 7) + ('0' * 10), 0, "SyncA")
+        self.blocks_uchar_to_float_0_0 = blocks.uchar_to_float()
         self.blocks_throttle_0 = blocks.throttle(gr.sizeof_float*1, samp_rate,True)
-        self.blocks_multiply_xx_0 = blocks.multiply_vff(1)
-        self.blocks_multiply_const_vxx_1 = blocks.multiply_const_vff((0, ))
-        self.blocks_multiply_const_vxx_0 = blocks.multiply_const_vff((1, ))
-        self.blocks_complex_to_mag_0 = blocks.complex_to_mag(1)
+        self.blocks_threshold_ff_0 = blocks.threshold_ff(-0.1, 0.1, 0)
+        self.blocks_sub_xx_0 = blocks.sub_ff(1)
+        self.blocks_rms_xx_0 = blocks.rms_ff(0.0001)
+        self.blocks_multiply_const_vxx_0_0 = blocks.multiply_const_vff((0, ))
+        self.blocks_float_to_uchar_0 = blocks.float_to_uchar()
+        self.blocks_file_meta_sink_0 = blocks.file_meta_sink(gr.sizeof_float*1, "/Users/bjmclaug/source/stem_station/raw_meta.dat", baud_rate, 1, blocks.GR_FILE_FLOAT, False, baud_rate * (60 * 20), "", True)
+        self.blocks_file_meta_sink_0.set_unbuffered(False)
+        self.blocks_complex_to_mag_squared_0 = blocks.complex_to_mag_squared(1)
         self.blocks_add_xx_0 = blocks.add_vff(1)
-        self.blocks_add_const_vxx_0 = blocks.add_const_vff((-0.3, ))
 
         ##################################################
         # Connections
         ##################################################
-        self.connect((self.blocks_add_const_vxx_0, 0), (self.digital_binary_slicer_fb_0, 0))    
+        self.connect((self.blocks_add_xx_0, 0), (self.blocks_file_meta_sink_0, 0))    
+        self.connect((self.blocks_add_xx_0, 0), (self.qtgui_time_raster_sink_x_0, 0))    
         self.connect((self.blocks_add_xx_0, 0), (self.qtgui_time_sink_x_0, 0))    
-        self.connect((self.blocks_complex_to_mag_0, 0), (self.rational_resampler_xxx_0, 0))    
-        self.connect((self.blocks_multiply_const_vxx_0, 0), (self.blocks_add_const_vxx_0, 0))    
-        self.connect((self.blocks_multiply_const_vxx_0, 0), (self.blocks_add_xx_0, 0))    
-        self.connect((self.blocks_multiply_const_vxx_1, 0), (self.blocks_add_xx_0, 1))    
-        self.connect((self.blocks_multiply_xx_0, 0), (self.hilbert_fc_0, 0))    
-        self.connect((self.blocks_throttle_0, 0), (self.blocks_multiply_xx_0, 0))    
-        self.connect((self.blocks_throttle_0, 0), (self.blocks_multiply_xx_0, 1))    
-        self.connect((self.blocks_uchar_to_float_0, 0), (self.blocks_multiply_const_vxx_1, 0))    
-        self.connect((self.digital_binary_slicer_fb_0, 0), (self.digital_correlate_access_code_tag_bb_0, 0))    
-        self.connect((self.digital_correlate_access_code_tag_bb_0, 0), (self.blocks_uchar_to_float_0, 0))    
+        self.connect((self.blocks_complex_to_mag_squared_0, 0), (self.rational_resampler_xxx_0, 0))    
+        self.connect((self.blocks_float_to_uchar_0, 0), (self.digital_correlate_access_code_tag_bb_0_0, 0))    
+        self.connect((self.blocks_multiply_const_vxx_0_0, 0), (self.blocks_add_xx_0, 1))    
+        self.connect((self.blocks_rms_xx_0, 0), (self.blocks_sub_xx_0, 1))    
+        self.connect((self.blocks_sub_xx_0, 0), (self.blocks_threshold_ff_0, 0))    
+        self.connect((self.blocks_threshold_ff_0, 0), (self.blocks_float_to_uchar_0, 0))    
+        self.connect((self.blocks_throttle_0, 0), (self.rational_resampler_xxx_1, 0))    
+        self.connect((self.blocks_uchar_to_float_0_0, 0), (self.blocks_multiply_const_vxx_0_0, 0))    
+        self.connect((self.digital_correlate_access_code_tag_bb_0_0, 0), (self.blocks_uchar_to_float_0_0, 0))    
         self.connect((self.fm_demodulated_source, 0), (self.blocks_throttle_0, 0))    
-        self.connect((self.hilbert_fc_0, 0), (self.low_pass_filter_0, 0))    
-        self.connect((self.low_pass_filter_0, 0), (self.blocks_complex_to_mag_0, 0))    
-        self.connect((self.rational_resampler_xxx_0, 0), (self.blocks_multiply_const_vxx_0, 0))    
+        self.connect((self.hilbert_fc_0, 0), (self.blocks_complex_to_mag_squared_0, 0))    
+        self.connect((self.rational_resampler_xxx_0, 0), (self.blocks_add_xx_0, 0))    
+        self.connect((self.rational_resampler_xxx_0, 0), (self.blocks_rms_xx_0, 0))    
+        self.connect((self.rational_resampler_xxx_0, 0), (self.blocks_sub_xx_0, 0))    
+        self.connect((self.rational_resampler_xxx_1, 0), (self.hilbert_fc_0, 0))    
 
     def closeEvent(self, event):
         self.settings = Qt.QSettings("GNU Radio", "top_block")
         self.settings.setValue("geometry", self.saveGeometry())
         event.accept()
+
+    def get_factor_of_baud(self):
+        return self.factor_of_baud
+
+    def set_factor_of_baud(self, factor_of_baud):
+        self.factor_of_baud = factor_of_baud
+        self.set_demod_rate(self.baud_rate * self.factor_of_baud)
+
+    def get_baud_rate(self):
+        return self.baud_rate
+
+    def set_baud_rate(self, baud_rate):
+        self.baud_rate = baud_rate
+        self.set_demod_rate(self.baud_rate * self.factor_of_baud)
+        self.qtgui_time_raster_sink_x_0.set_num_cols(int(self.baud_rate / 2))
+        self.qtgui_time_sink_x_0.set_samp_rate(self.baud_rate)
 
     def get_samp_rate(self):
         return self.samp_rate
@@ -161,14 +218,12 @@ class top_block(gr.top_block, Qt.QWidget):
     def set_samp_rate(self, samp_rate):
         self.samp_rate = samp_rate
         self.blocks_throttle_0.set_sample_rate(self.samp_rate)
-        self.low_pass_filter_0.set_taps(firdes.low_pass(1, self.samp_rate, 1180, 100, firdes.WIN_BLACKMAN, 6.76))
 
-    def get_baud_rate(self):
-        return self.baud_rate
+    def get_demod_rate(self):
+        return self.demod_rate
 
-    def set_baud_rate(self, baud_rate):
-        self.baud_rate = baud_rate
-        self.qtgui_time_sink_x_0.set_samp_rate(self.baud_rate)
+    def set_demod_rate(self, demod_rate):
+        self.demod_rate = demod_rate
 
 
 if __name__ == '__main__':
