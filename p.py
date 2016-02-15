@@ -118,12 +118,18 @@ pixels = list(struct.unpack(unpack_format, raw_bytes))
 print('Finding Sync Signals')
 if len(syncs):
     new_pixels = []
+    pre_syncs = pixels[0:syncs[0]['index']]
+    additional_pixels = 2080 - (len(pre_syncs) % 2080)
+    pre_syncs = ([0] * additional_pixels) + pre_syncs
+    print '***Additional Pixels {} ***'.format(additional_pixels)
+    pre_syncs = [list(line) for line in grouper(2080, pre_syncs, 0)]
+
     for sync in syncs:
         pixel_set = pixels[sync['index']:sync['index'] + sync['nitems']]
         pixel_set = [list(line) for line in grouper(2080, pixel_set, pixel_set[-1])]
         new_pixels.extend(pixel_set)
 
-    pixels = new_pixels
+    pixels = pre_syncs + new_pixels
 
 raw_images = {'A':[], 'B':[]}
 raw_images['A'] = [line[0:(2080//2)] for line in pixels]

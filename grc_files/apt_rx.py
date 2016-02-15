@@ -3,7 +3,7 @@
 # GNU Radio Python Flow Graph
 # Title: NOAA APT Satellite Receiver
 # Author: Brian McLaughlin
-# Generated: Sat Dec 12 17:04:01 2015
+# Generated: Mon Feb 15 14:08:08 2016
 ##################################################
 
 if __name__ == '__main__':
@@ -16,134 +16,243 @@ if __name__ == '__main__':
         except:
             print "Warning: failed to XInitThreads()"
 
+import os
+import sys
+sys.path.append(os.environ.get('GRC_HIER_PATH', os.path.expanduser('~/.grc_gnuradio')))
+
+from PyQt4 import Qt
+from apt_am_demod import apt_am_demod  # grc-generated hier_block
+from gnuradio import analog
 from gnuradio import blocks
 from gnuradio import eng_notation
+from gnuradio import filter
 from gnuradio import gr
-from gnuradio import wxgui
+from gnuradio import gr, blocks
+from gnuradio import qtgui
 from gnuradio.eng_option import eng_option
-from gnuradio.fft import window
 from gnuradio.filter import firdes
-from gnuradio.wxgui import fftsink2
-from gnuradio.wxgui import waterfallsink2
-from grc_gnuradio import wxgui as grc_wxgui
 from optparse import OptionParser
-import osmosdr
-import time
-import wx
+import rigcontrol
+import sip
 
 
-class apt_rx(grc_wxgui.top_block_gui):
+class apt_rx(gr.top_block, Qt.QWidget):
 
     def __init__(self):
-        grc_wxgui.top_block_gui.__init__(self, title="NOAA APT Satellite Receiver")
-        _icon_path = "/usr/share/icons/hicolor/32x32/apps/gnuradio-grc.png"
-        self.SetIcon(wx.Icon(_icon_path, wx.BITMAP_TYPE_ANY))
+        gr.top_block.__init__(self, "NOAA APT Satellite Receiver")
+        Qt.QWidget.__init__(self)
+        self.setWindowTitle("NOAA APT Satellite Receiver")
+        try:
+             self.setWindowIcon(Qt.QIcon.fromTheme('gnuradio-grc'))
+        except:
+             pass
+        self.top_scroll_layout = Qt.QVBoxLayout()
+        self.setLayout(self.top_scroll_layout)
+        self.top_scroll = Qt.QScrollArea()
+        self.top_scroll.setFrameStyle(Qt.QFrame.NoFrame)
+        self.top_scroll_layout.addWidget(self.top_scroll)
+        self.top_scroll.setWidgetResizable(True)
+        self.top_widget = Qt.QWidget()
+        self.top_scroll.setWidget(self.top_widget)
+        self.top_layout = Qt.QVBoxLayout(self.top_widget)
+        self.top_grid_layout = Qt.QGridLayout()
+        self.top_layout.addLayout(self.top_grid_layout)
+
+        self.settings = Qt.QSettings("GNU Radio", "apt_rx")
+        self.restoreGeometry(self.settings.value("geometry").toByteArray())
 
         ##################################################
         # Variables
         ##################################################
-        self.satellite_freq = satellite_freq = 137.62e6
-        self.rf_samp_rate = rf_samp_rate = 1.024e6
+        self.satellite_frequency = satellite_frequency = 0
+        self.variable_qtgui_label_0 = variable_qtgui_label_0 = '{:.4f} MHz'.format(satellite_frequency/1e6)
+        self.rf_samp_rate = rf_samp_rate = 256e3
         self.baud_rate = baud_rate = 4160
 
         ##################################################
         # Blocks
         ##################################################
-        self.top_notebook = self.top_notebook = wx.Notebook(self.GetWin(), style=wx.NB_TOP)
-        self.top_notebook.AddPage(grc_wxgui.Panel(self.top_notebook), "Satellite Receive")
-        self.top_notebook.AddPage(grc_wxgui.Panel(self.top_notebook), "Baseband")
-        self.Add(self.top_notebook)
-        self.if_receive_notebook = self.if_receive_notebook = wx.Notebook(self.top_notebook.GetPage(0).GetWin(), style=wx.NB_TOP)
-        self.if_receive_notebook.AddPage(grc_wxgui.Panel(self.if_receive_notebook), "FFT")
-        self.if_receive_notebook.AddPage(grc_wxgui.Panel(self.if_receive_notebook), "Waterfall")
-        self.top_notebook.GetPage(0).Add(self.if_receive_notebook)
-        self.wxgui_waterfallsink2_0 = waterfallsink2.waterfall_sink_c(
-        	self.if_receive_notebook.GetPage(1).GetWin(),
-        	baseband_freq=satellite_freq,
-        	dynamic_range=100,
-        	ref_level=-10,
-        	ref_scale=2.0,
-        	sample_rate=baud_rate * 24,
-        	fft_size=512,
-        	fft_rate=15,
-        	average=True,
-        	avg_alpha=0.1333,
-        	title="Waterfall Plot",
-        	win=window.flattop,
-        )
-        self.if_receive_notebook.GetPage(1).GridAdd(self.wxgui_waterfallsink2_0.win, 0, 0, 1, 1)
-        self.wxgui_fftsink2_0 = fftsink2.fft_sink_c(
-        	self.if_receive_notebook.GetPage(0).GetWin(),
-        	baseband_freq=satellite_freq,
-        	y_per_div=5,
-        	y_divs=10,
-        	ref_level=-10,
-        	ref_scale=2.0,
-        	sample_rate=baud_rate * 24,
-        	fft_size=1024,
-        	fft_rate=15,
-        	average=True,
-        	avg_alpha=0.1333,
-        	title="Intermediate Frequency Receive Spectrum",
-        	peak_hold=False,
-        )
-        self.if_receive_notebook.GetPage(0).GridAdd(self.wxgui_fftsink2_0.win, 0, 0, 1, 1)
-        self.rtlsdr_source_0 = osmosdr.source( args="numchan=" + str(1) + " " + "" )
-        self.rtlsdr_source_0.set_sample_rate(baud_rate * 24)
-        self.rtlsdr_source_0.set_center_freq(satellite_freq, 0)
-        self.rtlsdr_source_0.set_freq_corr(9, 0)
-        self.rtlsdr_source_0.set_dc_offset_mode(0, 0)
-        self.rtlsdr_source_0.set_iq_balance_mode(0, 0)
-        self.rtlsdr_source_0.set_gain_mode(False, 0)
-        self.rtlsdr_source_0.set_gain(49.6, 0)
-        self.rtlsdr_source_0.set_if_gain(0, 0)
-        self.rtlsdr_source_0.set_bb_gain(0, 0)
-        self.rtlsdr_source_0.set_antenna("", 0)
-        self.rtlsdr_source_0.set_bandwidth(0, 0)
+        self._variable_qtgui_label_0_tool_bar = Qt.QToolBar(self)
+        
+        if None:
+          self._variable_qtgui_label_0_formatter = None
+        else:
+          self._variable_qtgui_label_0_formatter = lambda x: x
+        
+        self._variable_qtgui_label_0_tool_bar.addWidget(Qt.QLabel("Satellite Frequency"+": "))
+        self._variable_qtgui_label_0_label = Qt.QLabel(str(self._variable_qtgui_label_0_formatter(self.variable_qtgui_label_0)))
+        self._variable_qtgui_label_0_tool_bar.addWidget(self._variable_qtgui_label_0_label)
+        self.top_layout.addWidget(self._variable_qtgui_label_0_tool_bar)
           
-        self.blocks_file_sink_0 = blocks.file_sink(gr.sizeof_gr_complex*1, "/home/brian/stem_station/raw_baud_x_24.bin", False)
-        self.blocks_file_sink_0.set_unbuffered(False)
-        self.baseband_notebook = self.baseband_notebook = wx.Notebook(self.top_notebook.GetPage(1).GetWin(), style=wx.NB_TOP)
-        self.baseband_notebook.AddPage(grc_wxgui.Panel(self.baseband_notebook), "Spectrum")
-        self.baseband_notebook.AddPage(grc_wxgui.Panel(self.baseband_notebook), "Analog Signal")
-        self.top_notebook.GetPage(1).Add(self.baseband_notebook)
+        self.rigcontrol_rigcontrol_0 = rigcontrol.rigcontrol(self.set_satellite_frequency, self.get_satellite_frequency, True)
+        self.qtgui_time_sink_x_0_0 = qtgui.time_sink_f(
+        	baud_rate / 2, #size
+        	baud_rate, #samp_rate
+        	'APT Full Line', #name
+        	1 #number of inputs
+        )
+        self.qtgui_time_sink_x_0_0.set_update_time(0.10)
+        self.qtgui_time_sink_x_0_0.set_y_axis(-0.5, 1.5)
+        
+        self.qtgui_time_sink_x_0_0.set_y_label("Amplitude", "")
+        
+        self.qtgui_time_sink_x_0_0.enable_tags(-1, True)
+        self.qtgui_time_sink_x_0_0.set_trigger_mode(qtgui.TRIG_MODE_FREE, qtgui.TRIG_SLOPE_POS, 0.0, 0.01, 0, 'SyncA')
+        self.qtgui_time_sink_x_0_0.enable_autoscale(False)
+        self.qtgui_time_sink_x_0_0.enable_grid(False)
+        self.qtgui_time_sink_x_0_0.enable_control_panel(False)
+        
+        if not False:
+          self.qtgui_time_sink_x_0_0.disable_legend()
+        
+        labels = ["", "", "", "", "",
+                  "", "", "", "", ""]
+        widths = [1, 1, 1, 1, 1,
+                  1, 1, 1, 1, 1]
+        colors = ["blue", "red", "green", "black", "cyan",
+                  "magenta", "yellow", "dark red", "dark green", "blue"]
+        styles = [1, 1, 1, 1, 1,
+                  1, 1, 1, 1, 1]
+        markers = [-1, -1, -1, -1, -1,
+                   -1, -1, -1, -1, -1]
+        alphas = [1.0, 1.0, 1.0, 1.0, 1.0,
+                  1.0, 1.0, 1.0, 1.0, 1.0]
+        
+        for i in xrange(1):
+            if len(labels[i]) == 0:
+                self.qtgui_time_sink_x_0_0.set_line_label(i, "Data {0}".format(i))
+            else:
+                self.qtgui_time_sink_x_0_0.set_line_label(i, labels[i])
+            self.qtgui_time_sink_x_0_0.set_line_width(i, widths[i])
+            self.qtgui_time_sink_x_0_0.set_line_color(i, colors[i])
+            self.qtgui_time_sink_x_0_0.set_line_style(i, styles[i])
+            self.qtgui_time_sink_x_0_0.set_line_marker(i, markers[i])
+            self.qtgui_time_sink_x_0_0.set_line_alpha(i, alphas[i])
+        
+        self._qtgui_time_sink_x_0_0_win = sip.wrapinstance(self.qtgui_time_sink_x_0_0.pyqwidget(), Qt.QWidget)
+        self.top_layout.addWidget(self._qtgui_time_sink_x_0_0_win)
+        self.qtgui_freq_sink_x_0 = qtgui.freq_sink_c(
+        	1024, #size
+        	firdes.WIN_BLACKMAN_hARRIS, #wintype
+        	0, #fc
+        	rf_samp_rate, #bw
+        	"", #name
+        	1 #number of inputs
+        )
+        self.qtgui_freq_sink_x_0.set_update_time(0.10)
+        self.qtgui_freq_sink_x_0.set_y_axis(0, 40)
+        self.qtgui_freq_sink_x_0.set_trigger_mode(qtgui.TRIG_MODE_FREE, 0.0, 0, "")
+        self.qtgui_freq_sink_x_0.enable_autoscale(False)
+        self.qtgui_freq_sink_x_0.enable_grid(False)
+        self.qtgui_freq_sink_x_0.set_fft_average(0.2)
+        self.qtgui_freq_sink_x_0.enable_control_panel(False)
+        
+        if not True:
+          self.qtgui_freq_sink_x_0.disable_legend()
+        
+        if complex == type(float()):
+          self.qtgui_freq_sink_x_0.set_plot_pos_half(not True)
+        
+        labels = ["", "", "", "", "",
+                  "", "", "", "", ""]
+        widths = [1, 1, 1, 1, 1,
+                  1, 1, 1, 1, 1]
+        colors = ["blue", "red", "green", "black", "cyan",
+                  "magenta", "yellow", "dark red", "dark green", "dark blue"]
+        alphas = [1.0, 1.0, 1.0, 1.0, 1.0,
+                  1.0, 1.0, 1.0, 1.0, 1.0]
+        for i in xrange(1):
+            if len(labels[i]) == 0:
+                self.qtgui_freq_sink_x_0.set_line_label(i, "Data {0}".format(i))
+            else:
+                self.qtgui_freq_sink_x_0.set_line_label(i, labels[i])
+            self.qtgui_freq_sink_x_0.set_line_width(i, widths[i])
+            self.qtgui_freq_sink_x_0.set_line_color(i, colors[i])
+            self.qtgui_freq_sink_x_0.set_line_alpha(i, alphas[i])
+        
+        self._qtgui_freq_sink_x_0_win = sip.wrapinstance(self.qtgui_freq_sink_x_0.pyqwidget(), Qt.QWidget)
+        self.top_layout.addWidget(self._qtgui_freq_sink_x_0_win)
+        self.low_pass_filter_0 = filter.fir_filter_ccf(1, firdes.low_pass(
+        	1, rf_samp_rate, 50e3, 10e3, firdes.WIN_HAMMING, 6.76))
+        self.blocks_throttle_0 = blocks.throttle(gr.sizeof_gr_complex*1, rf_samp_rate,True)
+        self.blocks_socket_pdu_0 = blocks.socket_pdu("TCP_SERVER", "", "4532", 10000, False)
+        self.blocks_multiply_const_vxx_0 = blocks.multiply_const_vff((100, ))
+        self.blocks_file_source_0 = blocks.file_source(gr.sizeof_gr_complex*1, "/home/brian/Downloads/noaa-12_256k.dat", False)
+        self.blocks_file_meta_sink_0 = blocks.file_meta_sink(gr.sizeof_float*1, "/home/brian/stem_station/raw_meta2.dat", baud_rate, 1, blocks.GR_FILE_FLOAT, False, baud_rate * (60 * 20), "", True)
+        self.blocks_file_meta_sink_0.set_unbuffered(False)
+        self.apt_am_demod_0 = apt_am_demod(
+            parameter_samp_rate=rf_samp_rate,
+        )
+        self.analog_wfm_rcv_0 = analog.wfm_rcv(
+        	quad_rate=rf_samp_rate,
+        	audio_decimation=1,
+        )
 
         ##################################################
         # Connections
         ##################################################
-        self.connect((self.rtlsdr_source_0, 0), (self.blocks_file_sink_0, 0))    
-        self.connect((self.rtlsdr_source_0, 0), (self.wxgui_fftsink2_0, 0))    
-        self.connect((self.rtlsdr_source_0, 0), (self.wxgui_waterfallsink2_0, 0))    
+        self.msg_connect((self.blocks_socket_pdu_0, 'pdus'), (self.rigcontrol_rigcontrol_0, 'in'))    
+        self.msg_connect((self.rigcontrol_rigcontrol_0, 'out'), (self.blocks_socket_pdu_0, 'pdus'))    
+        self.connect((self.analog_wfm_rcv_0, 0), (self.blocks_multiply_const_vxx_0, 0))    
+        self.connect((self.apt_am_demod_0, 0), (self.blocks_file_meta_sink_0, 0))    
+        self.connect((self.apt_am_demod_0, 0), (self.qtgui_time_sink_x_0_0, 0))    
+        self.connect((self.blocks_file_source_0, 0), (self.blocks_throttle_0, 0))    
+        self.connect((self.blocks_multiply_const_vxx_0, 0), (self.apt_am_demod_0, 0))    
+        self.connect((self.blocks_throttle_0, 0), (self.low_pass_filter_0, 0))    
+        self.connect((self.low_pass_filter_0, 0), (self.analog_wfm_rcv_0, 0))    
+        self.connect((self.low_pass_filter_0, 0), (self.qtgui_freq_sink_x_0, 0))    
 
+    def closeEvent(self, event):
+        self.settings = Qt.QSettings("GNU Radio", "apt_rx")
+        self.settings.setValue("geometry", self.saveGeometry())
+        event.accept()
 
-    def get_satellite_freq(self):
-        return self.satellite_freq
+    def get_satellite_frequency(self):
+        return self.satellite_frequency
 
-    def set_satellite_freq(self, satellite_freq):
-        self.satellite_freq = satellite_freq
-        self.rtlsdr_source_0.set_center_freq(self.satellite_freq, 0)
-        self.wxgui_fftsink2_0.set_baseband_freq(self.satellite_freq)
-        self.wxgui_waterfallsink2_0.set_baseband_freq(self.satellite_freq)
+    def set_satellite_frequency(self, satellite_frequency):
+        self.satellite_frequency = satellite_frequency
+        self.set_variable_qtgui_label_0(self._variable_qtgui_label_0_formatter('{:.4f} MHz'.format(self.satellite_frequency/1e6)))
+
+    def get_variable_qtgui_label_0(self):
+        return self.variable_qtgui_label_0
+
+    def set_variable_qtgui_label_0(self, variable_qtgui_label_0):
+        self.variable_qtgui_label_0 = variable_qtgui_label_0
+        Qt.QMetaObject.invokeMethod(self._variable_qtgui_label_0_label, "setText", Qt.Q_ARG("QString", str(self.variable_qtgui_label_0)))
 
     def get_rf_samp_rate(self):
         return self.rf_samp_rate
 
     def set_rf_samp_rate(self, rf_samp_rate):
         self.rf_samp_rate = rf_samp_rate
+        self.apt_am_demod_0.set_parameter_samp_rate(self.rf_samp_rate)
+        self.blocks_throttle_0.set_sample_rate(self.rf_samp_rate)
+        self.low_pass_filter_0.set_taps(firdes.low_pass(1, self.rf_samp_rate, 50e3, 10e3, firdes.WIN_HAMMING, 6.76))
+        self.qtgui_freq_sink_x_0.set_frequency_range(0, self.rf_samp_rate)
 
     def get_baud_rate(self):
         return self.baud_rate
 
     def set_baud_rate(self, baud_rate):
         self.baud_rate = baud_rate
-        self.rtlsdr_source_0.set_sample_rate(self.baud_rate * 24)
-        self.wxgui_fftsink2_0.set_sample_rate(self.baud_rate * 24)
-        self.wxgui_waterfallsink2_0.set_sample_rate(self.baud_rate * 24)
+        self.qtgui_time_sink_x_0_0.set_samp_rate(self.baud_rate)
 
 
 if __name__ == '__main__':
     parser = OptionParser(option_class=eng_option, usage="%prog: [options]")
     (options, args) = parser.parse_args()
+    from distutils.version import StrictVersion
+    if StrictVersion(Qt.qVersion()) >= StrictVersion("4.5.0"):
+        Qt.QApplication.setGraphicsSystem(gr.prefs().get_string('qtgui','style','raster'))
+    qapp = Qt.QApplication(sys.argv)
     tb = apt_rx()
-    tb.Start(True)
-    tb.Wait()
+    tb.start()
+    tb.show()
+
+    def quitting():
+        tb.stop()
+        tb.wait()
+    qapp.connect(qapp, Qt.SIGNAL("aboutToQuit()"), quitting)
+    qapp.exec_()
+    tb = None  # to clean up Qt widgets
