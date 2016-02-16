@@ -1,19 +1,16 @@
 import argparse
-import os.path
-import struct
 import math
-
-#import matplotlib.pyplot as plt
-#from numpy import correlate, arange, argmax, histogram, interp, where
-from PIL import Image, ImageOps
-
-#from scipy.ndimage import gaussian_filter
-
-from itertools import tee, izip_longest
-from gnuradio.blocks import parse_file_metadata
-# import parse_file_metadata
+import numpy as np
+import os.path
 import pmt
+import struct
 import sys
+#import matplotlib.pyplot as plt
+
+from gnuradio.blocks import parse_file_metadata
+from PIL import Image, ImageOps
+from itertools import tee, izip_longest
+
 
 def grouper(n, iterable, fillvalue=None):
     "grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx"
@@ -23,13 +20,45 @@ def grouper(n, iterable, fillvalue=None):
 def map(x, in_min, in_max, out_min, out_max):
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
 
-BYTES_PER_FLOAT = 4
-BAUD_RATE = 4160
-SAMPLES_PER_PIXEL = 1
-LINE_RATE = 0.5
-GRAYSCALE = 'L'
+def space_calibration(image_data):
+    space_cala_start = sync_width + 5
+    space_cala_end = sync_width + (space_mark_width - 5)
+    space_calb_start = full_channel_width + (sync_width + 5)
+    space_calb_end = full_channel_width + (sync_width + (space_mark_width - 5))
+    space_cala = [line[space_cala_start:space_cala_end] for line in image_data]
+    space_cala = [np.mean(line) for line in space_cala]
+    space_cala_mean = np.mean(space_cala)
+    space_cala_min = min(space_cala)
+    for i, line in enumerate(space_cala):
+        if line > (space_cala_mean + (space_cala_mean - space_cala_min)):
+            space_cala[i] = 0
+    first_non_zero = [i for i in space_cala if i != 0][0]
+    if space_cala[0] == 0: space_cala[0] = first_non_zero
+    for i, line in enumerate(space_cala):
+        if line == 0: space_cala[i] = space_cala[i-1]
+    space_calb = [line[space_calb_start:space_calb_end] for line in image_data]
+    space_calb = [np.mean(line) for line in space_calb]
+    space_calb_mean = np.mean(space_calb)
+    space_calb_max = max(space_calb)
+    for i, line in enumerate(space_calb):
+        if line < (space_calb_mean - (space_calb_max - space_calb_mean)):
+            space_calb[i] = 0
+    first_non_zero = [i for i in space_calb if i != 0][0]
+    if space_calb[0] == 0: space_calb[0] = first_non_zero
+    for i, line in enumerate(space_calb):
+        if line == 0: space_calb[i] = space_calb[i-1]
+    line_cal = zip(space_cala, space_calb)
+    return line_cal
 
-samples_per_line = int((BAUD_RATE * SAMPLES_PER_PIXEL) * LINE_RATE)
+sync_width = 40
+space_mark_width = 45
+image_width = 909
+tlm_frame_width = 46
+full_channel_width = sync_width + space_mark_width + image_width + tlm_frame_width
+full_line_width = full_channel_width * 2
+
+BYTES_PER_FLOAT = 4
+GRAYSCALE = 'L'
 
 parser = argparse.ArgumentParser()
 parser.add_argument("input_file", help="Raw APT demodulated data file")
@@ -38,7 +67,7 @@ args = parser.parse_args()
 input_file_directory = os.path.dirname(args.input_file)
 input_filename_base, _ = os.path.splitext(os.path.basename(args.input_file))
 header_file = input_file_directory + os.path.basename(args.input_file) + '.hdr'
-# print('Opening {}'.format(args.input_file))
+
 has_header = os.path.isfile(header_file)
 first_sync = 0
 sync_len = 40
@@ -129,11 +158,21 @@ if len(syncs):
         pixel_set = [list(line) for line in grouper(2080, pixel_set, pixel_set[-1])]
         new_pixels.extend(pixel_set)
 
+
+    aligned_start = len(pre_syncs)
+    space_cal = space_calibration(new_pixels)
+    for i, line in enumerate(new_pixels):
+        new_pixels[i] = np.clip(line, min(space_cal[i]), max(space_cal[i]))
+        for j, pixel in enumerate(line):
+            new_pixels[i][j] = int(map(pixel, min(space_cal[i]), max(space_cal[i]), 0, 255))
     pixels = pre_syncs + new_pixels
 
 raw_images = {'A':[], 'B':[]}
 raw_images['A'] = [line[0:(2080//2)] for line in pixels]
 raw_images['B'] = [line[(2080//2):] for line in pixels]
+
+# space_val_a = space_calibration(raw_images['A'][aligned_start:], 'space_a.csv')
+# space_val_b = space_calibration(raw_images['B'][aligned_start:], 'space_b.csv')
 
 # lines = len(pixels) // samples_per_line
 #pixels = pixels[0:samples_per_line * lines]
@@ -145,11 +184,11 @@ for image in raw_images:
 
     print('Found {} useable lines.'.format(lines))
 
-    print('Normalizing, Equalizing, & Scaling to 1-Byte Range')
-    max_sample = max(pixels)
-    min_sample = min(pixels)
-    for i, pixel in enumerate(pixels):
-        pixels[i] = int(map(pixel, min_sample, max_sample, 0, 255))
+    # print('Normalizing, Equalizing, & Scaling to 1-Byte Range')
+    # max_sample = max(pixels)
+    # min_sample = min(pixels)
+    # for i, pixel in enumerate(pixels):
+    #     pixels[i] = int(map(pixel, min_sample, max_sample, 0, 255))
         # if pixels[i] < 0:
         #     pixels[i] = 0
         # pixels[i] = int((pixel / max_sample) * 255)
