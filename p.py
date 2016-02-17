@@ -50,6 +50,24 @@ def space_calibration(image_data):
     line_cal = zip(space_cala, space_calb)
     return line_cal
 
+def sync_normalization(image_data):
+    synca_start = 0
+    synca_end = 40
+    syncb_start = full_channel_width
+    syncb_end = full_channel_width + 40
+    for i, line in enumerate(image_data):
+        sync_combined = line[synca_start:synca_end] + line[syncb_start:syncb_end]
+        sync_mean = np.mean(sync_combined)
+        sync_high = np.median([value for value in sync_combined if value >= sync_mean])
+        sync_low = np.median([value for value in sync_combined if value < sync_mean])
+        sync_range = sync_high - sync_low
+        absolute_high = sync_range + (0.05 * sync_range)
+        absolute_low = 0.05 * sync_range
+        image_data[i] = np.clip(line, absolute_low, absolute_high)
+        image_data[i] = [int(map(p, absolute_low, absolute_high, 0, 255)) for p in line]
+
+    return image_data
+
 sync_width = 40
 space_mark_width = 45
 image_width = 909
@@ -160,11 +178,12 @@ if len(syncs):
 
 
     aligned_start = len(pre_syncs)
-    space_cal = space_calibration(new_pixels)
-    for i, line in enumerate(new_pixels):
-        new_pixels[i] = np.clip(line, min(space_cal[i]), max(space_cal[i]))
-        for j, pixel in enumerate(line):
-            new_pixels[i][j] = int(map(pixel, min(space_cal[i]), max(space_cal[i]), 0, 255))
+    # space_cal = space_calibration(new_pixels)
+    # for i, line in enumerate(new_pixels):
+    #     new_pixels[i] = np.clip(line, min(space_cal[i]), max(space_cal[i]))
+    #     for j, pixel in enumerate(line):
+    #         new_pixels[i][j] = int(map(pixel, min(space_cal[i]), max(space_cal[i]), 0, 255))
+    # new_pixels = sync_normalization(new_pixels)
     pixels = pre_syncs + new_pixels
 
 raw_images = {'A':[], 'B':[]}
@@ -184,11 +203,11 @@ for image in raw_images:
 
     print('Found {} useable lines.'.format(lines))
 
-    # print('Normalizing, Equalizing, & Scaling to 1-Byte Range')
-    # max_sample = max(pixels)
-    # min_sample = min(pixels)
-    # for i, pixel in enumerate(pixels):
-    #     pixels[i] = int(map(pixel, min_sample, max_sample, 0, 255))
+    print('Normalizing, Equalizing, & Scaling to 1-Byte Range')
+    max_sample = max(pixels)
+    min_sample = min(pixels)
+    for i, pixel in enumerate(pixels):
+        pixels[i] = int(map(pixel, min_sample, max_sample, 0, 255))
         # if pixels[i] < 0:
         #     pixels[i] = 0
         # pixels[i] = int((pixel / max_sample) * 255)
