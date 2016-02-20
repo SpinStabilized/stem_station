@@ -229,7 +229,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(240, 497)</value>
+      <value>(240, 457)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -280,7 +280,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(576, 265)</value>
+      <value>(592, 313)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -311,7 +311,7 @@
     </param>
     <param>
       <key>const</key>
-      <value>5</value>
+      <value>parameter_apt_gain</value>
     </param>
     <param>
       <key>affinity</key>
@@ -374,7 +374,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1104, 259)</value>
+      <value>(1144, 307)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -425,7 +425,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(48, 315)</value>
+      <value>(184, 363)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -468,7 +468,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(312, 241)</value>
+      <value>(320, 297)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -519,7 +519,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(416, 251)</value>
+      <value>(440, 291)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -527,7 +527,7 @@
     </param>
     <param>
       <key>high</key>
-      <value>0.1</value>
+      <value>0.01</value>
     </param>
     <param>
       <key>id</key>
@@ -539,7 +539,7 @@
     </param>
     <param>
       <key>low</key>
-      <value>-0.1</value>
+      <value>-0.01</value>
     </param>
     <param>
       <key>maxoutbuf</key>
@@ -570,7 +570,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(952, 265)</value>
+      <value>(984, 313)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -613,7 +613,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(728, 243)</value>
+      <value>(752, 291)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -711,7 +711,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(368, 507)</value>
+      <value>(368, 459)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -783,6 +783,49 @@
     <param>
       <key>vlen</key>
       <value>1</value>
+    </param>
+  </block>
+  <block>
+    <key>parameter</key>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(680, 3)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>parameter_apt_gain</value>
+    </param>
+    <param>
+      <key>label</key>
+      <value>APT Gain</value>
+    </param>
+    <param>
+      <key>short_id</key>
+      <value></value>
+    </param>
+    <param>
+      <key>type</key>
+      <value>intx</value>
+    </param>
+    <param>
+      <key>value</key>
+      <value>0</value>
     </param>
   </block>
   <block>
@@ -926,7 +969,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1256, 259)</value>
+      <value>(1296, 307)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -953,7 +996,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(-8, 238)</value>
+      <value>(0, 315)</value>
     </param>
     <param>
       <key>_rotation</key>

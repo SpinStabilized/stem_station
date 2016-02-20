@@ -20,54 +20,6 @@ def grouper(n, iterable, fillvalue=None):
 def map(x, in_min, in_max, out_min, out_max):
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
 
-def space_calibration(image_data):
-    space_cala_start = sync_width + 5
-    space_cala_end = sync_width + (space_mark_width - 5)
-    space_calb_start = full_channel_width + (sync_width + 5)
-    space_calb_end = full_channel_width + (sync_width + (space_mark_width - 5))
-    space_cala = [line[space_cala_start:space_cala_end] for line in image_data]
-    space_cala = [np.mean(line) for line in space_cala]
-    space_cala_mean = np.mean(space_cala)
-    space_cala_min = min(space_cala)
-    for i, line in enumerate(space_cala):
-        if line > (space_cala_mean + (space_cala_mean - space_cala_min)):
-            space_cala[i] = 0
-    first_non_zero = [i for i in space_cala if i != 0][0]
-    if space_cala[0] == 0: space_cala[0] = first_non_zero
-    for i, line in enumerate(space_cala):
-        if line == 0: space_cala[i] = space_cala[i-1]
-    space_calb = [line[space_calb_start:space_calb_end] for line in image_data]
-    space_calb = [np.mean(line) for line in space_calb]
-    space_calb_mean = np.mean(space_calb)
-    space_calb_max = max(space_calb)
-    for i, line in enumerate(space_calb):
-        if line < (space_calb_mean - (space_calb_max - space_calb_mean)):
-            space_calb[i] = 0
-    first_non_zero = [i for i in space_calb if i != 0][0]
-    if space_calb[0] == 0: space_calb[0] = first_non_zero
-    for i, line in enumerate(space_calb):
-        if line == 0: space_calb[i] = space_calb[i-1]
-    line_cal = zip(space_cala, space_calb)
-    return line_cal
-
-def sync_normalization(image_data):
-    synca_start = 0
-    synca_end = 40
-    syncb_start = full_channel_width
-    syncb_end = full_channel_width + 40
-    for i, line in enumerate(image_data):
-        sync_combined = line[synca_start:synca_end] + line[syncb_start:syncb_end]
-        sync_mean = np.mean(sync_combined)
-        sync_high = np.median([value for value in sync_combined if value >= sync_mean])
-        sync_low = np.median([value for value in sync_combined if value < sync_mean])
-        sync_range = sync_high - sync_low
-        absolute_high = sync_range + (0.05 * sync_range)
-        absolute_low = 0.05 * sync_range
-        image_data[i] = np.clip(line, absolute_low, absolute_high)
-        image_data[i] = [int(map(p, absolute_low, absolute_high, 0, 255)) for p in line]
-
-    return image_data
-
 sync_width = 40
 space_mark_width = 45
 image_width = 909
@@ -178,20 +130,12 @@ if len(syncs):
 
 
     aligned_start = len(pre_syncs)
-    # space_cal = space_calibration(new_pixels)
-    # for i, line in enumerate(new_pixels):
-    #     new_pixels[i] = np.clip(line, min(space_cal[i]), max(space_cal[i]))
-    #     for j, pixel in enumerate(line):
-    #         new_pixels[i][j] = int(map(pixel, min(space_cal[i]), max(space_cal[i]), 0, 255))
-    # new_pixels = sync_normalization(new_pixels)
     pixels = pre_syncs + new_pixels
 
 raw_images = {'A':[], 'B':[]}
 raw_images['A'] = [line[0:(2080//2)] for line in pixels]
 raw_images['B'] = [line[(2080//2):] for line in pixels]
-
-# space_val_a = space_calibration(raw_images['A'][aligned_start:], 'space_a.csv')
-# space_val_b = space_calibration(raw_images['B'][aligned_start:], 'space_b.csv')
+raw_images['F'] = pixels
 
 # lines = len(pixels) // samples_per_line
 #pixels = pixels[0:samples_per_line * lines]
@@ -208,9 +152,6 @@ for image in raw_images:
     min_sample = min(pixels)
     for i, pixel in enumerate(pixels):
         pixels[i] = int(map(pixel, min_sample, max_sample, 0, 255))
-        # if pixels[i] < 0:
-        #     pixels[i] = 0
-        # pixels[i] = int((pixel / max_sample) * 255)
 
     output_file = input_file_directory + input_filename_base + image + '.png'
     image = Image.new(GRAYSCALE, (width, lines))

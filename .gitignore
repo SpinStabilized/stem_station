@@ -16,8 +16,8 @@ target/
 # Intermediate Data Files
 *.dat
 *.bin
+*.hdr
 
 # Eclipse/PyDev Files
 .project
 .pydevproject
-
