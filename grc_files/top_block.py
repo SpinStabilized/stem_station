@@ -2,7 +2,7 @@
 ##################################################
 # GNU Radio Python Flow Graph
 # Title: Top Block
-# Generated: Mon Feb 15 13:48:43 2016
+# Generated: Tue Feb 23 13:06:31 2016
 ##################################################
 
 if __name__ == '__main__':
@@ -28,6 +28,7 @@ from gnuradio import gr, blocks
 from gnuradio import qtgui
 from gnuradio.eng_option import eng_option
 from gnuradio.filter import firdes
+from gnuradio.qtgui import Range, RangeWidget
 from optparse import OptionParser
 import sip
 
@@ -62,12 +63,16 @@ class top_block(gr.top_block, Qt.QWidget):
         ##################################################
         self.factor_of_baud = factor_of_baud = 8
         self.baud_rate = baud_rate = 4160
+        self.signal_gain = signal_gain = 5
         self.samp_rate = samp_rate = 11025
         self.demod_rate = demod_rate = baud_rate * factor_of_baud
 
         ##################################################
         # Blocks
         ##################################################
+        self._signal_gain_range = Range(0, 800, 1, 5, 200)
+        self._signal_gain_win = RangeWidget(self._signal_gain_range, self.set_signal_gain, "Signal Gain", "counter_slider", float)
+        self.top_layout.addWidget(self._signal_gain_win)
         self.qtgui_time_sink_x_0 = qtgui.time_sink_f(
         	baud_rate / 2, #size
         	baud_rate, #samp_rate
@@ -114,11 +119,42 @@ class top_block(gr.top_block, Qt.QWidget):
         
         self._qtgui_time_sink_x_0_win = sip.wrapinstance(self.qtgui_time_sink_x_0.pyqwidget(), Qt.QWidget)
         self.top_layout.addWidget(self._qtgui_time_sink_x_0_win)
-        self.fm_demodulated_source = blocks.wavfile_source("/home/brian/stem_station/sample_files/N18_4827.wav", False)
+        self.qtgui_time_raster_sink_x_0 = qtgui.time_raster_sink_f(
+        	baud_rate,
+        	128,
+        	int(baud_rate / 2),
+        	([]),
+        	([]),
+        	"",
+        	1,
+        	)
+        
+        self.qtgui_time_raster_sink_x_0.set_update_time(0.5)
+        self.qtgui_time_raster_sink_x_0.set_intensity_range(-0.5, 0.75)
+        self.qtgui_time_raster_sink_x_0.enable_grid(False)
+        
+        labels = ["", "", "", "", "",
+                  "", "", "", "", ""]
+        colors = [1, 0, 0, 0, 0,
+                  0, 0, 0, 0, 0]
+        alphas = [1.0, 1.0, 1.0, 1.0, 1.0,
+                  1.0, 1.0, 1.0, 1.0, 1.0]
+        for i in xrange(1):
+            if len(labels[i]) == 0:
+                self.qtgui_time_raster_sink_x_0.set_line_label(i, "Data {0}".format(i))
+            else:
+                self.qtgui_time_raster_sink_x_0.set_line_label(i, labels[i])
+            self.qtgui_time_raster_sink_x_0.set_color_map(i, colors[i])
+            self.qtgui_time_raster_sink_x_0.set_line_alpha(i, alphas[i])
+        
+        self._qtgui_time_raster_sink_x_0_win = sip.wrapinstance(self.qtgui_time_raster_sink_x_0.pyqwidget(), Qt.QWidget)
+        self.top_layout.addWidget(self._qtgui_time_raster_sink_x_0_win)
+        self.fm_demodulated_source = blocks.wavfile_source("/Users/bjmclaug/source/stem_station/sample_files/N18_4827.wav", False)
         self.blocks_throttle_0 = blocks.throttle(gr.sizeof_float*1, samp_rate,True)
-        self.blocks_file_meta_sink_0 = blocks.file_meta_sink(gr.sizeof_float*1, "/home/brian/stem_station/raw_meta.dat", baud_rate, 1, blocks.GR_FILE_FLOAT, False, baud_rate * (60 * 20), "", True)
+        self.blocks_file_meta_sink_0 = blocks.file_meta_sink(gr.sizeof_float*1, "/Users/bjmclaug/source/stem_station/raw_meta.dat", baud_rate, 1, blocks.GR_FILE_FLOAT, False, baud_rate * (60 * 20), "", True)
         self.blocks_file_meta_sink_0.set_unbuffered(False)
         self.apt_am_demod_0 = apt_am_demod(
+            parameter_apt_gain=signal_gain,
             parameter_samp_rate=11.025e3,
         )
 
@@ -126,6 +162,7 @@ class top_block(gr.top_block, Qt.QWidget):
         # Connections
         ##################################################
         self.connect((self.apt_am_demod_0, 0), (self.blocks_file_meta_sink_0, 0))    
+        self.connect((self.apt_am_demod_0, 0), (self.qtgui_time_raster_sink_x_0, 0))    
         self.connect((self.apt_am_demod_0, 0), (self.qtgui_time_sink_x_0, 0))    
         self.connect((self.blocks_throttle_0, 0), (self.apt_am_demod_0, 0))    
         self.connect((self.fm_demodulated_source, 0), (self.blocks_throttle_0, 0))    
@@ -148,7 +185,15 @@ class top_block(gr.top_block, Qt.QWidget):
     def set_baud_rate(self, baud_rate):
         self.baud_rate = baud_rate
         self.set_demod_rate(self.baud_rate * self.factor_of_baud)
+        self.qtgui_time_raster_sink_x_0.set_num_cols(int(self.baud_rate / 2))
         self.qtgui_time_sink_x_0.set_samp_rate(self.baud_rate)
+
+    def get_signal_gain(self):
+        return self.signal_gain
+
+    def set_signal_gain(self, signal_gain):
+        self.signal_gain = signal_gain
+        self.apt_am_demod_0.set_parameter_apt_gain(self.signal_gain)
 
     def get_samp_rate(self):
         return self.samp_rate

@@ -9,10 +9,6 @@
       <value>Brian McLaughlin</value>
     </param>
     <param>
-      <key>alias</key>
-      <value></value>
-    </param>
-    <param>
       <key>window_size</key>
       <value>2400, 2400</value>
     </param>
@@ -71,6 +67,33 @@
     <param>
       <key>title</key>
       <value>APT AM Demod</value>
+    </param>
+  </block>
+  <block>
+    <key>variable</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(304, 59)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>am_carrier</value>
+    </param>
+    <param>
+      <key>value</key>
+      <value>2400</value>
     </param>
   </block>
   <block>
@@ -190,7 +213,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(776, 139)</value>
+      <value>(680, 144)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -323,7 +346,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(624, 163)</value>
+      <value>(512, 158)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -648,7 +671,7 @@
     </param>
     <param>
       <key>center_freq</key>
-      <value>2400</value>
+      <value>am_carrier</value>
     </param>
     <param>
       <key>comment</key>
@@ -668,7 +691,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(392, 139)</value>
+      <value>(312, 142)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -692,7 +715,7 @@
     </param>
     <param>
       <key>taps</key>
-      <value>firdes.low_pass(1, demod_rate, demod_rate / 2, demod_rate / 4)</value>
+      <value>firdes.low_pass(1, demod_rate, 1500, 400)</value>
     </param>
     <param>
       <key>type</key>
@@ -736,6 +759,49 @@
     <param>
       <key>optional</key>
       <value>False</value>
+    </param>
+    <param>
+      <key>vlen</key>
+      <value>1</value>
+    </param>
+  </block>
+  <block>
+    <key>pad_sink</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(648, 94)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>pad_sink_0_0</value>
+    </param>
+    <param>
+      <key>type</key>
+      <value>complex</value>
+    </param>
+    <param>
+      <key>label</key>
+      <value>baseband_out</value>
+    </param>
+    <param>
+      <key>num_streams</key>
+      <value>1</value>
+    </param>
+    <param>
+      <key>optional</key>
+      <value>True</value>
     </param>
     <param>
       <key>vlen</key>
@@ -899,7 +965,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(200, 123)</value>
+      <value>(152, 128)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -942,7 +1008,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(960, 163)</value>
+      <value>(936, 158)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1086,6 +1152,12 @@
   <connection>
     <source_block_id>blocks_multiply_const_vxx_0</source_block_id>
     <sink_block_id>analog_am_demod_cf_0</sink_block_id>
+    <source_key>0</source_key>
+    <sink_key>0</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>blocks_multiply_const_vxx_0</source_block_id>
+    <sink_block_id>pad_sink_0_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>

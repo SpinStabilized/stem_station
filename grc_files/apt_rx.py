@@ -3,7 +3,7 @@
 # GNU Radio Python Flow Graph
 # Title: NOAA APT Satellite Receiver
 # Author: Brian McLaughlin
-# Generated: Sat Feb 20 16:21:23 2016
+# Generated: Tue Feb 23 12:52:35 2016
 ##################################################
 import threading
 
@@ -34,7 +34,6 @@ from gnuradio.eng_option import eng_option
 from gnuradio.filter import firdes
 from gnuradio.qtgui import Range, RangeWidget
 from optparse import OptionParser
-import rigcontrol
 import sip
 
 
@@ -68,7 +67,7 @@ class apt_rx(gr.top_block, Qt.QWidget):
         ##################################################
         # Variables
         ##################################################
-        self.satellite_frequency = satellite_frequency = 0
+        self.satellite_frequency = satellite_frequency = 137.5e6
         self.variable_qtgui_label_0 = variable_qtgui_label_0 = '{:.6f} MHz'.format(satellite_frequency/1e6)
         self.signal_gain = signal_gain = 400
         self.rf_samp_rate = rf_samp_rate = 256e3
@@ -77,6 +76,35 @@ class apt_rx(gr.top_block, Qt.QWidget):
         ##################################################
         # Blocks
         ##################################################
+        self.tabs_top = Qt.QTabWidget()
+        self.tabs_top_widget_0 = Qt.QWidget()
+        self.tabs_top_layout_0 = Qt.QBoxLayout(Qt.QBoxLayout.TopToBottom, self.tabs_top_widget_0)
+        self.tabs_top_grid_layout_0 = Qt.QGridLayout()
+        self.tabs_top_layout_0.addLayout(self.tabs_top_grid_layout_0)
+        self.tabs_top.addTab(self.tabs_top_widget_0, "RF Recieve")
+        self.tabs_top_widget_1 = Qt.QWidget()
+        self.tabs_top_layout_1 = Qt.QBoxLayout(Qt.QBoxLayout.TopToBottom, self.tabs_top_widget_1)
+        self.tabs_top_grid_layout_1 = Qt.QGridLayout()
+        self.tabs_top_layout_1.addLayout(self.tabs_top_grid_layout_1)
+        self.tabs_top.addTab(self.tabs_top_widget_1, "Baseband")
+        self.tabs_top_widget_2 = Qt.QWidget()
+        self.tabs_top_layout_2 = Qt.QBoxLayout(Qt.QBoxLayout.TopToBottom, self.tabs_top_widget_2)
+        self.tabs_top_grid_layout_2 = Qt.QGridLayout()
+        self.tabs_top_layout_2.addLayout(self.tabs_top_grid_layout_2)
+        self.tabs_top.addTab(self.tabs_top_widget_2, "APT Signal")
+        self.top_layout.addWidget(self.tabs_top)
+        self.tabs_apt_data = Qt.QTabWidget()
+        self.tabs_apt_data_widget_0 = Qt.QWidget()
+        self.tabs_apt_data_layout_0 = Qt.QBoxLayout(Qt.QBoxLayout.TopToBottom, self.tabs_apt_data_widget_0)
+        self.tabs_apt_data_grid_layout_0 = Qt.QGridLayout()
+        self.tabs_apt_data_layout_0.addLayout(self.tabs_apt_data_grid_layout_0)
+        self.tabs_apt_data.addTab(self.tabs_apt_data_widget_0, "Scope")
+        self.tabs_apt_data_widget_1 = Qt.QWidget()
+        self.tabs_apt_data_layout_1 = Qt.QBoxLayout(Qt.QBoxLayout.TopToBottom, self.tabs_apt_data_widget_1)
+        self.tabs_apt_data_grid_layout_1 = Qt.QGridLayout()
+        self.tabs_apt_data_layout_1.addLayout(self.tabs_apt_data_grid_layout_1)
+        self.tabs_apt_data.addTab(self.tabs_apt_data_widget_1, "Raster")
+        self.tabs_top_layout_2.addWidget(self.tabs_apt_data)
         self._signal_gain_range = Range(0, 800, 1, 400, 200)
         self._signal_gain_win = RangeWidget(self._signal_gain_range, self.set_signal_gain, "Signal Gain", "counter_slider", float)
         self.top_layout.addWidget(self._signal_gain_win)
@@ -92,10 +120,6 @@ class apt_rx(gr.top_block, Qt.QWidget):
         self._variable_qtgui_label_0_tool_bar.addWidget(self._variable_qtgui_label_0_label)
         self.top_layout.addWidget(self._variable_qtgui_label_0_tool_bar)
           
-        self.rigcontrol_rigcontrol_0 = rigcontrol.rigcontrol(
-            self.set_satellite_frequency if "satellite_frequency" in locals() else None,
-            self.get_satellite_frequency if "satellite_frequency" in locals() else None,
-            True)
         self.qtgui_time_sink_x_0_0 = qtgui.time_sink_f(
         	baud_rate / 2, #size
         	baud_rate, #samp_rate
@@ -141,11 +165,60 @@ class apt_rx(gr.top_block, Qt.QWidget):
             self.qtgui_time_sink_x_0_0.set_line_alpha(i, alphas[i])
         
         self._qtgui_time_sink_x_0_0_win = sip.wrapinstance(self.qtgui_time_sink_x_0_0.pyqwidget(), Qt.QWidget)
-        self.top_layout.addWidget(self._qtgui_time_sink_x_0_0_win)
-        self.qtgui_sink_x_0 = qtgui.sink_c(
+        self.tabs_apt_data_layout_0.addWidget(self._qtgui_time_sink_x_0_0_win)
+        self.qtgui_time_raster_sink_x_0 = qtgui.time_raster_sink_f(
+        	baud_rate,
+        	120*3,
+        	baud_rate // 2,
+        	([]),
+        	([]),
+        	"",
+        	1,
+        	)
+        
+        self.qtgui_time_raster_sink_x_0.set_update_time(0.10)
+        self.qtgui_time_raster_sink_x_0.set_intensity_range(-0.5, 1)
+        self.qtgui_time_raster_sink_x_0.enable_grid(False)
+        
+        labels = ["", "", "", "", "",
+                  "", "", "", "", ""]
+        colors = [1, 0, 0, 0, 0,
+                  0, 0, 0, 0, 0]
+        alphas = [1.0, 1.0, 1.0, 1.0, 1.0,
+                  1.0, 1.0, 1.0, 1.0, 1.0]
+        for i in xrange(1):
+            if len(labels[i]) == 0:
+                self.qtgui_time_raster_sink_x_0.set_line_label(i, "Data {0}".format(i))
+            else:
+                self.qtgui_time_raster_sink_x_0.set_line_label(i, labels[i])
+            self.qtgui_time_raster_sink_x_0.set_color_map(i, colors[i])
+            self.qtgui_time_raster_sink_x_0.set_line_alpha(i, alphas[i])
+        
+        self._qtgui_time_raster_sink_x_0_win = sip.wrapinstance(self.qtgui_time_raster_sink_x_0.pyqwidget(), Qt.QWidget)
+        self.tabs_apt_data_layout_1.addWidget(self._qtgui_time_raster_sink_x_0_win)
+        self.qtgui_sink_x_0_0 = qtgui.sink_c(
         	1024, #fftsize
         	firdes.WIN_BLACKMAN_hARRIS, #wintype
         	0, #fc
+        	33280, #bw
+        	"", #name
+        	True, #plotfreq
+        	True, #plotwaterfall
+        	True, #plottime
+        	False, #plotconst
+        )
+        self.qtgui_sink_x_0_0.set_update_time(1.0/10)
+        self._qtgui_sink_x_0_0_win = sip.wrapinstance(self.qtgui_sink_x_0_0.pyqwidget(), Qt.QWidget)
+        self.tabs_top_layout_1.addWidget(self._qtgui_sink_x_0_0_win)
+        
+        self.qtgui_sink_x_0_0.enable_rf_freq(True)
+        
+        
+          
+        self.qtgui_sink_x_0 = qtgui.sink_c(
+        	1024, #fftsize
+        	firdes.WIN_BLACKMAN_hARRIS, #wintype
+        	satellite_frequency, #fc
         	rf_samp_rate / 2, #bw
         	"", #name
         	True, #plotfreq
@@ -155,19 +228,18 @@ class apt_rx(gr.top_block, Qt.QWidget):
         )
         self.qtgui_sink_x_0.set_update_time(1.0/10)
         self._qtgui_sink_x_0_win = sip.wrapinstance(self.qtgui_sink_x_0.pyqwidget(), Qt.QWidget)
-        self.top_layout.addWidget(self._qtgui_sink_x_0_win)
+        self.tabs_top_layout_0.addWidget(self._qtgui_sink_x_0_win)
         
-        self.qtgui_sink_x_0.enable_rf_freq(False)
+        self.qtgui_sink_x_0.enable_rf_freq(True)
         
         
           
         self.low_pass_filter_0 = filter.fir_filter_ccf(2, firdes.low_pass(
         	1, rf_samp_rate, 50e3, 10e3, firdes.WIN_HAMMING, 6.76))
         self.blocks_throttle_0 = blocks.throttle(gr.sizeof_gr_complex*1, rf_samp_rate,True)
-        self.blocks_socket_pdu_0 = blocks.socket_pdu("TCP_SERVER", "", "4532", 10000, False)
         self.blocks_multiply_const_vxx_1 = blocks.multiply_const_vcc((0.00001, ))
-        self.blocks_file_source_0 = blocks.file_source(gr.sizeof_gr_complex*1, "/home/brian/Downloads/noaa-12_256k.dat", False)
-        self.blocks_file_meta_sink_0 = blocks.file_meta_sink(gr.sizeof_float*1, "/home/brian/stem_station/raw_meta2.dat", baud_rate, 1, blocks.GR_FILE_FLOAT, False, baud_rate * (60 * 20), "", True)
+        self.blocks_file_source_0 = blocks.file_source(gr.sizeof_gr_complex*1, "/Users/bjmclaug/Downloads/noaa-12_256k.dat", False)
+        self.blocks_file_meta_sink_0 = blocks.file_meta_sink(gr.sizeof_float*1, "/Users/bjmclaug/source/stem_station/raw_meta2.dat", baud_rate, 1, blocks.GR_FILE_FLOAT, False, baud_rate * (60 * 20), "", True)
         self.blocks_file_meta_sink_0.set_unbuffered(False)
         self.apt_am_demod_0 = apt_am_demod(
             parameter_apt_gain=signal_gain,
@@ -177,19 +249,22 @@ class apt_rx(gr.top_block, Qt.QWidget):
         	quad_rate=rf_samp_rate / 2,
         	audio_decimation=1,
         )
+        self.analog_agc3_xx_0 = analog.agc3_cc(1e-3, 1e-4, 0.9, 1.0, 1)
+        self.analog_agc3_xx_0.set_max_gain(1)
 
         ##################################################
         # Connections
         ##################################################
-        self.msg_connect((self.blocks_socket_pdu_0, 'pdus'), (self.rigcontrol_rigcontrol_0, 'in'))    
-        self.msg_connect((self.rigcontrol_rigcontrol_0, 'out'), (self.blocks_socket_pdu_0, 'pdus'))    
+        self.connect((self.analog_agc3_xx_0, 0), (self.analog_wfm_rcv_0, 0))    
         self.connect((self.analog_wfm_rcv_0, 0), (self.apt_am_demod_0, 0))    
         self.connect((self.apt_am_demod_0, 0), (self.blocks_file_meta_sink_0, 0))    
+        self.connect((self.apt_am_demod_0, 1), (self.qtgui_sink_x_0_0, 0))    
+        self.connect((self.apt_am_demod_0, 0), (self.qtgui_time_raster_sink_x_0, 0))    
         self.connect((self.apt_am_demod_0, 0), (self.qtgui_time_sink_x_0_0, 0))    
         self.connect((self.blocks_file_source_0, 0), (self.blocks_throttle_0, 0))    
         self.connect((self.blocks_multiply_const_vxx_1, 0), (self.low_pass_filter_0, 0))    
         self.connect((self.blocks_throttle_0, 0), (self.blocks_multiply_const_vxx_1, 0))    
-        self.connect((self.low_pass_filter_0, 0), (self.analog_wfm_rcv_0, 0))    
+        self.connect((self.low_pass_filter_0, 0), (self.analog_agc3_xx_0, 0))    
         self.connect((self.low_pass_filter_0, 0), (self.qtgui_sink_x_0, 0))    
 
     def closeEvent(self, event):
@@ -204,6 +279,7 @@ class apt_rx(gr.top_block, Qt.QWidget):
         with self._lock:
             self.satellite_frequency = satellite_frequency
             self.set_variable_qtgui_label_0(self._variable_qtgui_label_0_formatter('{:.6f} MHz'.format(self.satellite_frequency/1e6)))
+            self.qtgui_sink_x_0.set_frequency_range(self.satellite_frequency, self.rf_samp_rate / 2)
 
     def get_variable_qtgui_label_0(self):
         return self.variable_qtgui_label_0
@@ -230,7 +306,7 @@ class apt_rx(gr.top_block, Qt.QWidget):
             self.apt_am_demod_0.set_parameter_samp_rate(self.rf_samp_rate / 2)
             self.blocks_throttle_0.set_sample_rate(self.rf_samp_rate)
             self.low_pass_filter_0.set_taps(firdes.low_pass(1, self.rf_samp_rate, 50e3, 10e3, firdes.WIN_HAMMING, 6.76))
-            self.qtgui_sink_x_0.set_frequency_range(0, self.rf_samp_rate / 2)
+            self.qtgui_sink_x_0.set_frequency_range(self.satellite_frequency, self.rf_samp_rate / 2)
 
     def get_baud_rate(self):
         return self.baud_rate
@@ -238,6 +314,7 @@ class apt_rx(gr.top_block, Qt.QWidget):
     def set_baud_rate(self, baud_rate):
         with self._lock:
             self.baud_rate = baud_rate
+            self.qtgui_time_raster_sink_x_0.set_num_cols(self.baud_rate // 2)
             self.qtgui_time_sink_x_0_0.set_samp_rate(self.baud_rate)
 
 
