@@ -132,9 +132,12 @@ if len(syncs):
     aligned_start = len(pre_syncs)
     pixels = pre_syncs + new_pixels
 
-raw_images = {'A':[], 'B':[]}
-raw_images['A'] = [line[0:(2080//2)] for line in pixels]
-raw_images['B'] = [line[(2080//2):] for line in pixels]
+max_sample = max([max(line) for line in pixels])
+min_sample = min([min(line) for line in pixels])
+
+raw_images = {}
+# raw_images['A'] = [line[0:(2080//2)] for line in pixels]
+# raw_images['B'] = [line[(2080//2):] for line in pixels]
 raw_images['F'] = pixels
 
 # lines = len(pixels) // samples_per_line
@@ -148,8 +151,6 @@ for image in raw_images:
     print('Found {} useable lines.'.format(lines))
 
     print('Normalizing, Equalizing, & Scaling to 1-Byte Range')
-    max_sample = max(pixels)
-    min_sample = min(pixels)
     for i, pixel in enumerate(pixels):
         pixels[i] = int(map(pixel, min_sample, max_sample, 0, 255))
 
