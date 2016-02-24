@@ -9,10 +9,6 @@
       <value></value>
     </param>
     <param>
-      <key>alias</key>
-      <value></value>
-    </param>
-    <param>
       <key>window_size</key>
       <value>2400, 2400</value>
     </param>
@@ -319,7 +315,7 @@
     </param>
     <param>
       <key>file</key>
-      <value>/home/brian/stem_station/raw_meta.dat</value>
+      <value>/Users/bjmclaug/source/stem_station/raw_meta.dat</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -352,6 +348,53 @@
     <param>
       <key>unbuffered</key>
       <value>False</value>
+    </param>
+    <param>
+      <key>vlen</key>
+      <value>1</value>
+    </param>
+  </block>
+  <block>
+    <key>blocks_null_sink</key>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>bus_conns</key>
+      <value>[[0,],]</value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>affinity</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(416, 264)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>blocks_null_sink_0</value>
+    </param>
+    <param>
+      <key>type</key>
+      <value>float</value>
+    </param>
+    <param>
+      <key>num_inputs</key>
+      <value>1</value>
     </param>
     <param>
       <key>vlen</key>
@@ -433,7 +476,7 @@
     </param>
     <param>
       <key>file</key>
-      <value>/home/brian/stem_station/sample_files/N18_4827.wav</value>
+      <value>/Users/bjmclaug/source/stem_station/sample_files/N18_4827.wav</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -1026,6 +1069,12 @@
       <value>-0.5</value>
     </param>
   </block>
+  <connection>
+    <source_block_id>apt_am_demod_0</source_block_id>
+    <sink_block_id>blocks_null_sink_0</sink_block_id>
+    <source_key>1</source_key>
+    <sink_key>0</sink_key>
+  </connection>
   <connection>
     <source_block_id>apt_am_demod_0</source_block_id>
     <sink_block_id>blocks_file_meta_sink_0</sink_block_id>
