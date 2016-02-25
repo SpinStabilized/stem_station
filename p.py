@@ -5,7 +5,7 @@ import os.path
 import pmt
 import struct
 import sys
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
 from gnuradio.blocks import parse_file_metadata
 from PIL import Image, ImageOps
@@ -18,14 +18,51 @@ def grouper(n, iterable, fillvalue=None):
     return izip_longest(fillvalue=fillvalue, *args)
 
 def map(x, in_min, in_max, out_min, out_max):
-  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
+    in_min = float(in_min)
+    in_max = float(in_max)
+    out_min = float(out_min)
+    out_max = float(out_max)
+    return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
 
-sync_width = 40
-space_mark_width = 45
+def npmax(l):
+    max_idx = np.argmax(l)
+    max_val = l[max_idx]
+    return (max_idx, max_val)
+
+def process_tlm(tlm_strip):
+    tlm = [int(round(sum(line)/len(line))) for line in tlm_strip]
+    deltas = []
+    for i, point in enumerate(tlm):
+        if i != 0:
+            difference = abs(tlm[i] - tlm[i-1])
+        else:
+            difference = 0
+        deltas.append(difference)
+    frame_center, _ = npmax(deltas)
+    frame_start = frame_center - 64
+    frame_end = frame_start + 128
+    tlm_frame = tlm[frame_start:frame_end]
+    tlm_points = [int(sum(point)/len(point)) for point in grouper(8, tlm_frame, tlm_frame[-1])]
+    return tlm_points
+
+def closest(val, l):
+    return min(range(len(l)), key=lambda i: abs(l[i]-val))
+
+sync_width = 39
+space_mark_width = 47
 image_width = 909
-tlm_frame_width = 46
+tlm_frame_width = 45
 full_channel_width = sync_width + space_mark_width + image_width + tlm_frame_width
 full_line_width = full_channel_width * 2
+
+sync_range = {'A':(0, sync_width),
+              'B':(full_channel_width, full_channel_width + sync_width)}
+space_mark_range = {'A':(sync_range['A'][1], sync_range['A'][1] + space_mark_width),
+                    'B':(sync_range['B'][1], sync_range['B'][1] + space_mark_width)}
+image_range = {'A':(space_mark_range['A'][1], space_mark_range['A'][1] + image_width),
+               'B':(space_mark_range['B'][1], space_mark_range['B'][1] + image_width)}
+tlm_frame_range = {'A':(image_range['A'][1], image_range['A'][1] + tlm_frame_width),
+                   'B':(image_range['B'][1], image_range['B'][1] + tlm_frame_width)}
 
 BYTES_PER_FLOAT = 4
 GRAYSCALE = 'L'
@@ -111,12 +148,15 @@ print('Found {} Samples'.format(samples_found))
 
 unpack_format = '<' + ('f' * samples_found)
 pixels = list(struct.unpack(unpack_format, raw_bytes))
-
+# n, bins, patches = plt.hist(pixels, 256, facecolor='g')
+# plt.plot(pixels)
+# plt.show()
 # if len(syncs):
 #    pixels = pixels[syncs[0]['index']:]
 print('Finding Sync Signals')
+pre_syncs = []
+new_pixels = []
 if len(syncs):
-    new_pixels = []
     pre_syncs = pixels[0:syncs[0]['index']]
     additional_pixels = 2080 - (len(pre_syncs) % 2080)
     pre_syncs = ([0] * additional_pixels) + pre_syncs
@@ -130,15 +170,56 @@ if len(syncs):
 
 
     aligned_start = len(pre_syncs)
+    pixels = new_pixels
     pixels = pre_syncs + new_pixels
 
-max_sample = max([max(line) for line in pixels])
-min_sample = min([min(line) for line in pixels])
+print('Syncs/Lines Ratio: {} / {} - {:.0f}%'.format(len(syncs), len(pixels), (len(syncs)/float(len(pixels))) * 100 ))
+a_tlm = [line[tlm_frame_range['A'][0]:tlm_frame_range['A'][1]] for line in pixels[len(pre_syncs):]]
+a_tlm = [sum(line)/len(line) for line in a_tlm]
+b_tlm = [line[tlm_frame_range['B'][0]:tlm_frame_range['B'][1]] for line in pixels[len(pre_syncs):]]
+b_tlm = [sum(line)/len(line) for line in b_tlm]
+max_sample = max(max(a_tlm), max(b_tlm))
+min_sample = min(min(a_tlm), min(b_tlm))
+
+print('Scaling to 1-Byte Range')
+for i, line in enumerate(pixels):
+    l = np.clip(line, min_sample, max_sample)
+    for j, pixel in enumerate(l):
+        pixels[i][j] = int(round(map(pixel, min_sample, max_sample, 0, 255)))
+
+print('Determining Telemetry Values')
+a_tlm = [line[tlm_frame_range['A'][0]:tlm_frame_range['A'][1]] for line in pixels[len(pre_syncs):]]
+b_tlm = [line[tlm_frame_range['B'][0]:tlm_frame_range['B'][1]] for line in pixels[len(pre_syncs):]]
+a_telemetry = process_tlm(a_tlm)
+b_telemetry = process_tlm(b_tlm)
+unified_tlm = [sum(x)/2 for x in zip(a_telemetry[0:14], b_telemetry[0:14])]
+telemetry = {'wedges':unified_tlm[0:8], 'zero_mod':unified_tlm[8],
+             'thermistors':unified_tlm[9:14], 'a_chan_back':a_telemetry[14],
+             'a_channel':a_telemetry[15], 'b_chan_back':b_telemetry[14],
+             'b_channel':b_telemetry[15]}
+
+telemetry['a_channel'] = closest(telemetry['a_channel'], telemetry['wedges']) + 1
+telemetry['b_channel'] = closest(telemetry['b_channel'], telemetry['wedges']) + 1
+print(telemetry)
 
 raw_images = {}
-# raw_images['A'] = [line[0:(2080//2)] for line in pixels]
-# raw_images['B'] = [line[(2080//2):] for line in pixels]
+# raw_images['A_FULL'] = [line[0:full_channel_width] for line in pixels]
+# raw_images['A_SYNC'] = [line[sync_range[0]:sync_range[1]] for line in raw_images['A_FULL']]
+# raw_images['A_SPACE'] = [line[space_mark_range[0]:space_mark_range[1]] for line in raw_images['A_FULL']]
+# raw_images['A_IMAGE'] = [line[image_range[0]:image_range[1]] for line in raw_images['A_FULL']]
+# raw_images['A_TLM'] = [line[tlm_frame_range[0]:tlm_frame_range[1]] for line in raw_images['A_FULL']]
+# raw_images['B_FULL'] = [line[full_channel_width:] for line in pixels]
+# raw_images['B_SYNC'] = [line[sync_range[0]:sync_range[1]] for line in raw_images['B_FULL']]
+# raw_images['B_SPACE'] = [line[space_mark_range[0]:space_mark_range[1]] for line in raw_images['B_FULL']]
+# raw_images['B_IMAGE'] = [line[image_range[0]:image_range[1]] for line in raw_images['B_FULL']]
+# raw_images['B_TLM'] = [line[tlm_frame_range[0]:tlm_frame_range[1]] for line in raw_images['B_FULL']]
 raw_images['F'] = pixels
+
+
+
+# min_sample = min(pixels)
+# max_sample = max(pixels)
+
 
 # lines = len(pixels) // samples_per_line
 #pixels = pixels[0:samples_per_line * lines]
@@ -147,15 +228,11 @@ for image in raw_images:
     lines = len(raw_images[image])
     width = len(raw_images[image][0])
     pixels = [item for sublist in raw_images[image] for item in sublist]
-
     print('Found {} useable lines.'.format(lines))
-
-    print('Normalizing, Equalizing, & Scaling to 1-Byte Range')
-    for i, pixel in enumerate(pixels):
-        pixels[i] = int(map(pixel, min_sample, max_sample, 0, 255))
 
     output_file = input_file_directory + input_filename_base + image + '.png'
     image = Image.new(GRAYSCALE, (width, lines))
     image.putdata(pixels)
-    image = ImageOps.equalize(image.rotate(180))
+    # image = ImageOps.equalize(image.rotate(180))
+    image = image.rotate(180)
     image.save(output_file)
