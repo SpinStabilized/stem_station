@@ -9,6 +9,10 @@
       <value></value>
     </param>
     <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
       <key>window_size</key>
       <value>2400, 2400</value>
     </param>
@@ -315,7 +319,7 @@
     </param>
     <param>
       <key>file</key>
-      <value>/Users/bjmclaug/source/stem_station/raw_meta.dat</value>
+      <value>/home/brian/stem_station/raw_meta.dat</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -378,7 +382,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(416, 264)</value>
+      <value>(488, 273)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -476,7 +480,7 @@
     </param>
     <param>
       <key>file</key>
-      <value>/Users/bjmclaug/source/stem_station/sample_files/N18_4827.wav</value>
+      <value>/home/brian/stem_station/sample_files/N18_4827.wav</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -1062,7 +1066,7 @@
     </param>
     <param>
       <key>ymax</key>
-      <value>1.5</value>
+      <value>0.5</value>
     </param>
     <param>
       <key>ymin</key>

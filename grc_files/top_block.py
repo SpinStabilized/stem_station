@@ -2,7 +2,7 @@
 ##################################################
 # GNU Radio Python Flow Graph
 # Title: Top Block
-# Generated: Wed Feb 24 14:10:40 2016
+# Generated: Wed Feb 24 20:13:21 2016
 ##################################################
 
 if __name__ == '__main__':
@@ -80,7 +80,7 @@ class top_block(gr.top_block, Qt.QWidget):
         	1 #number of inputs
         )
         self.qtgui_time_sink_x_0.set_update_time(0.10)
-        self.qtgui_time_sink_x_0.set_y_axis(-0.5, 1.5)
+        self.qtgui_time_sink_x_0.set_y_axis(-0.5, 0.5)
         
         self.qtgui_time_sink_x_0.set_y_label("Amplitude", "")
         
@@ -149,10 +149,10 @@ class top_block(gr.top_block, Qt.QWidget):
         
         self._qtgui_time_raster_sink_x_0_win = sip.wrapinstance(self.qtgui_time_raster_sink_x_0.pyqwidget(), Qt.QWidget)
         self.top_layout.addWidget(self._qtgui_time_raster_sink_x_0_win)
-        self.fm_demodulated_source = blocks.wavfile_source("/Users/bjmclaug/source/stem_station/sample_files/N18_4827.wav", False)
+        self.fm_demodulated_source = blocks.wavfile_source("/home/brian/stem_station/sample_files/N18_4827.wav", False)
         self.blocks_throttle_0 = blocks.throttle(gr.sizeof_float*1, samp_rate,True)
         self.blocks_null_sink_0 = blocks.null_sink(gr.sizeof_float*1)
-        self.blocks_file_meta_sink_0 = blocks.file_meta_sink(gr.sizeof_float*1, "/Users/bjmclaug/source/stem_station/raw_meta.dat", baud_rate, 1, blocks.GR_FILE_FLOAT, False, baud_rate * (60 * 20), "", True)
+        self.blocks_file_meta_sink_0 = blocks.file_meta_sink(gr.sizeof_float*1, "/home/brian/stem_station/raw_meta.dat", baud_rate, 1, blocks.GR_FILE_FLOAT, False, baud_rate * (60 * 20), "", True)
         self.blocks_file_meta_sink_0.set_unbuffered(False)
         self.apt_am_demod_0 = apt_am_demod(
             parameter_apt_gain=signal_gain,

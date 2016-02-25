@@ -3,7 +3,7 @@
 # GNU Radio Python Flow Graph
 # Title: NOAA APT Satellite Receiver
 # Author: Brian McLaughlin
-# Generated: Wed Feb 24 13:22:25 2016
+# Generated: Wed Feb 24 20:32:20 2016
 ##################################################
 import threading
 
@@ -332,8 +332,8 @@ class apt_rx(gr.top_block, Qt.QWidget):
         self.freq_xlating_fir_filter_xxx_0 = filter.freq_xlating_fir_filter_ccc(1, (firdes.low_pass(1, rf_samp_rate, rf_samp_rate // 2, baud_rate)), 10e3, rf_samp_rate)
         self.blocks_throttle_0 = blocks.throttle(gr.sizeof_gr_complex*1, rf_samp_rate,True)
         self.blocks_multiply_const_vxx_1 = blocks.multiply_const_vcc((0.00001, ))
-        self.blocks_file_source_0 = blocks.file_source(gr.sizeof_gr_complex*1, "/Users/bjmclaug/Downloads/noaa-12_256k.dat", False)
-        self.blocks_file_meta_sink_0 = blocks.file_meta_sink(gr.sizeof_float*1, "/Users/bjmclaug/source/stem_station/raw_meta2.dat", baud_rate, 1, blocks.GR_FILE_FLOAT, False, baud_rate * (60 * 20), "", True)
+        self.blocks_file_source_0 = blocks.file_source(gr.sizeof_gr_complex*1, "/home/brian/Downloads/noaa-12_256k.dat", False)
+        self.blocks_file_meta_sink_0 = blocks.file_meta_sink(gr.sizeof_float*1, "/home/brian/stem_station/raw_meta2.dat", baud_rate, 1, blocks.GR_FILE_FLOAT, False, baud_rate * (60 * 20), "", True)
         self.blocks_file_meta_sink_0.set_unbuffered(False)
         self.apt_am_demod_0 = apt_am_demod(
             parameter_apt_gain=signal_gain,

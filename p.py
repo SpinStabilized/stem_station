@@ -93,7 +93,7 @@ if has_header:
                 tmp_lines = info['nitems'] // 2080
                 extra_pixels = info['nitems'] % 2080
                 # print tmp_lines, extra_pixels, current_position
-                info['index'] = current_position - 40
+                info['index'] = current_position - 39
                 # print info
                 syncs.append(info)
             # print info
