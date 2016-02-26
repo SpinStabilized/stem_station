@@ -4,7 +4,7 @@
 # GNU Radio Python Flow Graph
 # Title: NOAA APT Satellite Receiver
 # Author: Brian McLaughlin
-# Generated: Fri Feb 26 08:47:23 2016
+# Generated: Fri Feb 26 13:16:33 2016
 ##################################################
 import threading
 
@@ -288,9 +288,9 @@ class apt_rx(gr.top_block, Qt.QWidget):
         self._qtgui_freq_sink_x_1_win = sip.wrapinstance(self.qtgui_freq_sink_x_1.pyqwidget(), Qt.QWidget)
         self.tabs_rf_layout_0.addWidget(self._qtgui_freq_sink_x_1_win)
         self.low_pass_filter_0_0 = filter.fir_filter_ccf(1, firdes.low_pass(
-        	1, rf_samp_rate // 2, 40e3, 5e3, firdes.WIN_HAMMING, 6.76))
+        	1, rf_samp_rate // 2, 40e3, 10e3, firdes.WIN_HAMMING, 6.76))
         self.low_pass_filter_0 = filter.fir_filter_ccf(2, firdes.low_pass(
-        	1, rf_samp_rate, 50e3, 10e3, firdes.WIN_HAMMING, 6.76))
+        	1, rf_samp_rate, 40e3, 40e3, firdes.WIN_HAMMING, 6.76))
         self.blocks_throttle_0 = blocks.throttle(gr.sizeof_gr_complex*1, rf_samp_rate,True)
         self.blocks_multiply_const_vxx_1 = blocks.multiply_const_vcc((0.00001, ))
         self.blocks_file_source_0 = blocks.file_source(gr.sizeof_gr_complex*1, "/Users/bjmclaug/Downloads/noaa-12_256k.dat", False)
@@ -360,10 +360,10 @@ class apt_rx(gr.top_block, Qt.QWidget):
             self.analog_quadrature_demod_cf_0.set_gain((self.rf_samp_rate // 2)/(2*math.pi*self.fsk_deviation_hz/8.0))
             self.apt_am_demod_0.set_parameter_samp_rate(self.rf_samp_rate / 2)
             self.blocks_throttle_0.set_sample_rate(self.rf_samp_rate)
-            self.low_pass_filter_0.set_taps(firdes.low_pass(1, self.rf_samp_rate, 50e3, 10e3, firdes.WIN_HAMMING, 6.76))
-            self.low_pass_filter_0_0.set_taps(firdes.low_pass(1, self.rf_samp_rate // 2, 40e3, 5e3, firdes.WIN_HAMMING, 6.76))
             self.qtgui_freq_sink_x_1.set_frequency_range(0, self.rf_samp_rate // 2)
             self.qtgui_waterfall_sink_x_0.set_frequency_range(0, self.rf_samp_rate // 2)
+            self.low_pass_filter_0_0.set_taps(firdes.low_pass(1, self.rf_samp_rate // 2, 40e3, 10e3, firdes.WIN_HAMMING, 6.76))
+            self.low_pass_filter_0.set_taps(firdes.low_pass(1, self.rf_samp_rate, 40e3, 40e3, firdes.WIN_HAMMING, 6.76))
 
     def get_fsk_deviation_hz(self):
         return self.fsk_deviation_hz

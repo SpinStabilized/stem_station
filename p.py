@@ -1,4 +1,5 @@
 import argparse
+import datetime
 import math
 import numpy as np
 import os.path
@@ -55,7 +56,12 @@ AVHRR_CHANNELS = {1:['1', (0.58, 0.68), 'Visible', 'Daytime cloud and surface ma
                   4:['4', (10.30, 11.30), 'Mid-IR', 'Night cloud mapping, sea surface temperature'],
                   5:['5', (11.50, 12.50), 'Mid-IR', 'Sea surface temperature']}
 
-CAL_DATA = {'NOAA-13':{'a':[[276.597, 0.051275, 1.36e-06, 0.0, 0.0],
+CAL_DATA = {'NOAA-12':{'a':[[276.597, 0.051275, 1.36e-06, 0.0, 0.0],
+                            [276.597, 0.051275, 1.36e-06, 0.0, 0.0],
+                            [276.597, 0.051275, 1.36e-06, 0.0, 0.0],
+                            [276.597, 0.051275, 1.36e-06, 0.0, 0.0]],
+                       'b':[0.25, 0.25, 0.25, 0.25]},
+            'NOAA-13':{'a':[[276.597, 0.051275, 1.36e-06, 0.0, 0.0],
                             [276.597, 0.051275, 1.36e-06, 0.0, 0.0],
                             [276.597, 0.051275, 1.36e-06, 0.0, 0.0],
                             [276.597, 0.051275, 1.36e-06, 0.0, 0.0]],
@@ -111,6 +117,9 @@ input_filename_base, _ = os.path.splitext(os.path.basename(args.input_file))
 header_file = input_file_directory + os.path.basename(args.input_file) + '.hdr'
 
 spacecraft = args.spacecraft
+if spacecraft not in CAL_DATA:
+    print('Warning spacecraft {} not found in calibration data. Defaulting to NOAA-19'.format(args.spacecraft))
+    spacecraft = 'NOAA-19'
 
 has_header = os.path.isfile(header_file)
 first_sync = 0
@@ -128,6 +137,7 @@ if has_header:
     ignore_next = False
     with open(header_file, 'rb') as handle:
         file_length = os.path.getsize(header_file)
+        double_length = 0
         while True:
 
             if (file_length - handle.tell()) < parse_file_metadata.HEADER_LENGTH:
@@ -159,18 +169,16 @@ if has_header:
 
                 extra_info = parse_file_metadata.parse_extra_dict(extra, info, debug)
 
-
-            # print info
-
             if 'SyncA' in info:
+                if not(info['nitems'] % 2080 < 3 and info['nitems'] % 2080 > 0):
+                    tmp_lines = info['nitems'] // 2080
+                    extra_pixels = info['nitems'] % 2080
+                    info['index'] = current_position - (39 + double_length)
+                    syncs.append(info)
+                    double_lenth = 0
+                else:
+                    double_length = info['nitems'] % 2080
 
-                tmp_lines = info['nitems'] // 2080
-                extra_pixels = info['nitems'] % 2080
-                # print tmp_lines, extra_pixels, current_position
-                info['index'] = current_position - 39
-                # print info
-                syncs.append(info)
-            # print info
             current_position = current_position + info['nitems']
 
 else:
@@ -222,6 +230,8 @@ else:
     min_sample = min(pixels)
     pixels = [list(line) for line in grouper(2080, pixels, 0)]
 
+file_duration = datetime.timedelta(seconds = len(pixels) / 2)
+
 print('Scaling to 1-Byte Range')
 for i, line in enumerate(pixels):
     line = np.clip(line, min_sample, max_sample)
@@ -248,6 +258,7 @@ if len(syncs):
     print('Image Information:')
     a_info = AVHRR_CHANNELS[telemetry['a_channel']]
     b_info = AVHRR_CHANNELS[telemetry['b_channel']]
+    print('     Capture Duration: {}'.format(file_duration))
     print('     Frame A: AVHRR Channel {} - {} - {}'.format(a_info[0], a_info[2], a_info[3]))
     print('     Frame B: AVHRR Channel {} - {} - {}'.format(b_info[0], b_info[2], b_info[3]))
     print('     Wedges: {}'.format(telemetry['wedges']))

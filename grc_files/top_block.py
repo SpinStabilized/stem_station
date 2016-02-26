@@ -3,7 +3,7 @@
 ##################################################
 # GNU Radio Python Flow Graph
 # Title: Top Block
-# Generated: Fri Feb 26 09:05:25 2016
+# Generated: Fri Feb 26 12:23:16 2016
 ##################################################
 
 if __name__ == '__main__':
@@ -202,8 +202,8 @@ class top_block(gr.top_block, Qt.QWidget):
 
     def set_samp_rate(self, samp_rate):
         self.samp_rate = samp_rate
-        self.blocks_throttle_0.set_sample_rate(self.samp_rate)
         self.apt_am_demod_0.set_parameter_samp_rate(self.samp_rate)
+        self.blocks_throttle_0.set_sample_rate(self.samp_rate)
 
     def get_demod_rate(self):
         return self.demod_rate

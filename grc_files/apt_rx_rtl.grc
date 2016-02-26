@@ -790,7 +790,7 @@
     </param>
     <param>
       <key>cutoff_freq</key>
-      <value>50e3</value>
+      <value>40e3</value>
     </param>
     <param>
       <key>decim</key>
@@ -838,7 +838,7 @@
     </param>
     <param>
       <key>width</key>
-      <value>10e3</value>
+      <value>40e3</value>
     </param>
     <param>
       <key>win</key>
@@ -913,7 +913,7 @@
     </param>
     <param>
       <key>width</key>
-      <value>5e3</value>
+      <value>10e3</value>
     </param>
     <param>
       <key>win</key>
