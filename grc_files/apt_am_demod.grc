@@ -1,11 +1,15 @@
 <?xml version='1.0' encoding='utf-8'?>
-<?grc format='1' created='3.7.9'?>
+<?grc format='1' created='3.7.8'?>
 <flow_graph>
   <timestamp>Thu Nov 19 07:54:21 2015</timestamp>
   <block>
     <key>options</key>
     <param>
       <key>author</key>
+      <value></value>
+    </param>
+    <param>
+      <key>alias</key>
       <value></value>
     </param>
     <param>
@@ -41,10 +45,6 @@
       <value>qt_gui</value>
     </param>
     <param>
-      <key>hier_block_src_path</key>
-      <value>.:</value>
-    </param>
-    <param>
       <key>id</key>
       <value>top_block</value>
     </param>
@@ -53,16 +53,8 @@
       <value>0</value>
     </param>
     <param>
-      <key>qt_qss_theme</key>
-      <value></value>
-    </param>
-    <param>
       <key>realtime_scheduling</key>
       <value></value>
-    </param>
-    <param>
-      <key>run_command</key>
-      <value>{python} -u {filename}</value>
     </param>
     <param>
       <key>run_options</key>
@@ -296,7 +288,7 @@
     </param>
     <param>
       <key>parameter_samp_rate</key>
-      <value>11.025e3</value>
+      <value>20800</value>
     </param>
   </block>
   <block>
@@ -327,7 +319,7 @@
     </param>
     <param>
       <key>file</key>
-      <value>/Users/bjmclaug/source/stem_station/raw_meta.dat</value>
+      <value>/home/brian/stem_station/raw_meta3.dat</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -410,7 +402,7 @@
     </param>
     <param>
       <key>samples_per_second</key>
-      <value>samp_rate</value>
+      <value>20800</value>
     </param>
     <param>
       <key>type</key>
@@ -441,7 +433,7 @@
     </param>
     <param>
       <key>file</key>
-      <value>/Users/bjmclaug/source/stem_station/sample_files/N18_4827.wav</value>
+      <value>/home/brian/Downloads/1413625450X5.wav</value>
     </param>
     <param>
       <key>_coordinate</key>
