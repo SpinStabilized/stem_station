@@ -5,7 +5,7 @@ import os.path
 import pmt
 import struct
 import sys
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 from gnuradio.blocks import parse_file_metadata
 from PIL import Image, ImageOps
@@ -55,6 +55,33 @@ AVHRR_CHANNELS = {1:['1', (0.58, 0.68), 'Visible', 'Daytime cloud and surface ma
                   4:['4', (10.30, 11.30), 'Mid-IR', 'Night cloud mapping, sea surface temperature'],
                   5:['5', (11.50, 12.50), 'Mid-IR', 'Sea surface temperature']}
 
+CAL_DATA = {'NOAA-13':{'a':[[276.597, 0.051275, 1.36e-06, 0.0, 0.0],
+                            [276.597, 0.051275, 1.36e-06, 0.0, 0.0],
+                            [276.597, 0.051275, 1.36e-06, 0.0, 0.0],
+                            [276.597, 0.051275, 1.36e-06, 0.0, 0.0]],
+                       'b':[0.25, 0.25, 0.25, 0.25]},
+            'NOAA-15':{'a':[[276.60157, 0.051045, 1.36328e-06, 0.0, 0.0],
+                            [276.62531, 0.050909, 1.47266e-06, 0.0, 0.0],
+                            [276.67413, 0.050907, 1.47656e-06, 0.0, 0.0],
+                            [276.59258, 0.050906, 1.47656e-06, 0.0, 0.0]],
+                       'b':[0.25, 0.25, 0.25, 0.25]},
+            'NOAA-18':{'a':[[276.601, 0.05090, 1.657e-06, 0.0, 0.0],
+                            [276.683, 0.05101, 1.482e-06, 0.0, 0.0],
+                            [276.565, 0.05117, 1.313e-06, 0.0, 0.0],
+                            [276.615, 0.05103, 1.484e-06, 0.0, 0.0]],
+                       'b':[0.25, 0.25, 0.25, 0.25]},
+            'NOAA-19':{'a':[[276.6067, 0.051111, 1.405783e-06, 0.0, 0.0],
+                            [276.6119, 0.051090, 1.496037e-06, 0.0, 0.0],
+                            [276.6311, 0.051033, 1.496990e-06, 0.0, 0.0],
+                            [276.6268, 0.051058, 1.493110e-06, 0.0, 0.0]],
+                       'b':[0.25, 0.25, 0.25, 0.25]}}
+
+def avhrr_prt_cal(x, a):
+    return sum([a[j] * (x ** j) for j in range(0, 5)])
+
+def avhrr_bb_temp(T, b):
+    return sum([T[i] * b[i] for i in range(0, 4)])
+
 sync_width = 39
 space_mark_width = 47
 image_width = 909
@@ -75,12 +102,15 @@ BYTES_PER_FLOAT = 4
 GRAYSCALE = 'L'
 
 parser = argparse.ArgumentParser()
-parser.add_argument("input_file", help="Raw APT demodulated data file")
+parser.add_argument('input_file', help='Raw APT demodulated data file')
+parser.add_argument('-s', '--spacecraft', default='NOAA-19', help='Spacecraft captured (for calibration)')
 args = parser.parse_args()
 
 input_file_directory = os.path.dirname(args.input_file)
 input_filename_base, _ = os.path.splitext(os.path.basename(args.input_file))
 header_file = input_file_directory + os.path.basename(args.input_file) + '.hdr'
+
+spacecraft = args.spacecraft
 
 has_header = os.path.isfile(header_file)
 first_sync = 0
@@ -200,7 +230,7 @@ for i, line in enumerate(pixels):
         pixels[i][j] = int(round(map(pixel, min_sample, max_sample, 0, 255)))
 
 if len(syncs):
-    print('Processing Telemetry')
+    print('Processing Telemetry for {}'.format(spacecraft))
     a_tlm = [line[tlm_frame_range['A'][0]:tlm_frame_range['A'][1]] for line in pixels[len(pre_syncs):]]
     b_tlm = [line[tlm_frame_range['B'][0]:tlm_frame_range['B'][1]] for line in pixels[len(pre_syncs):]]
     a_telemetry = process_tlm(a_tlm)
@@ -213,6 +243,8 @@ if len(syncs):
 
     telemetry['a_channel'] = closest(telemetry['a_channel'], telemetry['wedges']) + 1
     telemetry['b_channel'] = closest(telemetry['b_channel'], telemetry['wedges']) + 1
+    telemetry['prt_temps'] = [avhrr_prt_cal(telemetry['thermistors'][j], CAL_DATA[spacecraft]['a'][j]) for j in range(0, 4)]
+    telemetry['bb_temp'] = avhrr_bb_temp(telemetry['prt_temps'], CAL_DATA[spacecraft]['b'])
     print('Image Information:')
     a_info = AVHRR_CHANNELS[telemetry['a_channel']]
     b_info = AVHRR_CHANNELS[telemetry['b_channel']]
@@ -223,6 +255,8 @@ if len(syncs):
     print('     A Blackbody: {}'.format(telemetry['a_bb']))
     print('     B Blackbody: {}'.format(telemetry['b_bb']))
     print('     Thermistors: {}'.format(telemetry['thermistors']))
+    print('     Thermistor Temps: {}'.format('  '.join(['{:.2f} K'.format(temp) for temp in telemetry['prt_temps']])))
+    print('     Blackbody Reference Temp (K): {:.2f} K'.format(telemetry['bb_temp']))
 
 raw_images = {}
 raw_images['F'] = pixels
