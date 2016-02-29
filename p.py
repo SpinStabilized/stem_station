@@ -211,14 +211,16 @@ if len(syncs):
 
     aligned_start = len(pre_syncs)
     pixels = new_pixels
-    pixels = pre_syncs + new_pixels
+    # pixels = pre_syncs + new_pixels
     last_sync = sync_lines[-1]
     sync_ratio = len(syncs)/float(len(pixels))
 
-    if sync_ratio > 0.2:
-        a_tlm = [line[tlm_frame_range['A'][0]:tlm_frame_range['A'][1]] for line in pixels[len(pre_syncs):len(pre_syncs)+last_sync]]
+    if sync_ratio > 0.05:
+        # a_tlm = [line[tlm_frame_range['A'][0]:tlm_frame_range['A'][1]] for line in pixels[len(pre_syncs):len(pre_syncs)+last_sync]]
+        a_tlm = [line[tlm_frame_range['A'][0]:tlm_frame_range['A'][1]] for line in pixels]
         a_tlm = [sum(line)/len(line) for line in a_tlm]
-        b_tlm = [line[tlm_frame_range['B'][0]:tlm_frame_range['B'][1]] for line in pixels[len(pre_syncs):len(pre_syncs)+last_sync]]
+        # b_tlm = [line[tlm_frame_range['B'][0]:tlm_frame_range['B'][1]] for line in pixels[len(pre_syncs):len(pre_syncs)+last_sync]]
+        b_tlm = [line[tlm_frame_range['B'][0]:tlm_frame_range['B'][1]] for line in pixels]
         b_tlm = [sum(line)/len(line) for line in b_tlm]
         max_sample = max(max(a_tlm), max(b_tlm))
         min_sample = min(min(a_tlm), min(b_tlm))
@@ -243,10 +245,11 @@ for i, line in enumerate(pixels):
 
 sync_ratio = len(syncs)/float(len(pixels))
 print('Syncs/Lines Ratio: {} / {} - {:.0f}%'.format(len(syncs), len(pixels), sync_ratio * 100))
-if len(syncs) and sync_ratio > 0.2:
+if len(syncs) and sync_ratio > 0.05:
     print('Processing Telemetry for {}'.format(spacecraft))
-    a_tlm = [line[tlm_frame_range['A'][0]:tlm_frame_range['A'][1]] for line in pixels[len(pre_syncs):]]
-    b_tlm = [line[tlm_frame_range['B'][0]:tlm_frame_range['B'][1]] for line in pixels[len(pre_syncs):]]
+    # a_tlm = [line[tlm_frame_range['A'][0]:tlm_frame_range['A'][1]] for line in pixels[len(pre_syncs):]]
+    a_tlm = [line[tlm_frame_range['A'][0]:tlm_frame_range['A'][1]] for line in pixels]
+    b_tlm = [line[tlm_frame_range['B'][0]:tlm_frame_range['B'][1]] for line in pixels]
     a_telemetry = process_tlm(a_tlm)
     b_telemetry = process_tlm(b_tlm)
     unified_tlm = [sum(x)/2 for x in zip(a_telemetry[0:14], b_telemetry[0:14])]
