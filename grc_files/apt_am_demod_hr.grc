@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<?grc format='1' created='3.7.9'?>
+<?grc format='1' created='3.7.8'?>
 <flow_graph>
   <timestamp>Thu Nov 19 07:54:21 2015</timestamp>
   <block>
@@ -7,6 +7,10 @@
     <param>
       <key>author</key>
       <value>Brian McLaughlin</value>
+    </param>
+    <param>
+      <key>alias</key>
+      <value></value>
     </param>
     <param>
       <key>window_size</key>
@@ -41,10 +45,6 @@
       <value>hb</value>
     </param>
     <param>
-      <key>hier_block_src_path</key>
-      <value>.:</value>
-    </param>
-    <param>
       <key>id</key>
       <value>apt_am_demod</value>
     </param>
@@ -53,16 +53,8 @@
       <value>0</value>
     </param>
     <param>
-      <key>qt_qss_theme</key>
-      <value></value>
-    </param>
-    <param>
       <key>realtime_scheduling</key>
       <value></value>
-    </param>
-    <param>
-      <key>run_command</key>
-      <value>{python} -u {filename}</value>
     </param>
     <param>
       <key>run_options</key>
@@ -93,7 +85,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(129, 4)</value>
+      <value>(184, 3)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -120,7 +112,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(129, 53)</value>
+      <value>(184, 67)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -147,7 +139,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(125, 97)</value>
+      <value>(296, 67)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -174,7 +166,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(213, 53)</value>
+      <value>(280, 3)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -201,7 +193,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(337, 100)</value>
+      <value>(504, 67)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -228,7 +220,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(333, 3)</value>
+      <value>(496, 3)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -255,7 +247,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(322, 52)</value>
+      <value>(384, 3)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -306,7 +298,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(595, 173)</value>
+      <value>(760, 187)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -439,7 +431,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(465, 187)</value>
+      <value>(608, 211)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -490,7 +482,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(901, 374)</value>
+      <value>(1056, 275)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -562,6 +554,57 @@
     <param>
       <key>minoutbuf</key>
       <value>0</value>
+    </param>
+  </block>
+  <block>
+    <key>blocks_skiphead</key>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>affinity</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(816, 419)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>blocks_skiphead_0</value>
+    </param>
+    <param>
+      <key>maxoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>minoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>num_items</key>
+      <value>100</value>
+    </param>
+    <param>
+      <key>type</key>
+      <value>byte</value>
+    </param>
+    <param>
+      <key>vlen</key>
+      <value>1</value>
     </param>
   </block>
   <block>
@@ -686,7 +729,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(776, 374)</value>
+      <value>(880, 345)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -784,7 +827,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(287, 171)</value>
+      <value>(352, 147)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -859,6 +902,49 @@
     </param>
   </block>
   <block>
+    <key>pad_sink</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(840, 115)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>pad_sink_1</value>
+    </param>
+    <param>
+      <key>type</key>
+      <value>complex</value>
+    </param>
+    <param>
+      <key>label</key>
+      <value>baseband</value>
+    </param>
+    <param>
+      <key>num_streams</key>
+      <value>1</value>
+    </param>
+    <param>
+      <key>optional</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>vlen</key>
+      <value>1</value>
+    </param>
+  </block>
+  <block>
     <key>pad_source</key>
     <param>
       <key>comment</key>
@@ -870,7 +956,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(16, 171)</value>
+      <value>(16, 211)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -917,7 +1003,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(409, 62)</value>
+      <value>(608, 19)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -960,7 +1046,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(404, 4)</value>
+      <value>(752, 19)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1015,7 +1101,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(136, 157)</value>
+      <value>(160, 187)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1058,7 +1144,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(745, 187)</value>
+      <value>(944, 211)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1085,7 +1171,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1022, 374)</value>
+      <value>(1144, 363)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1218,6 +1304,12 @@
     <sink_key>1</sink_key>
   </connection>
   <connection>
+    <source_block_id>blocks_skiphead_0</source_block_id>
+    <sink_block_id>blocks_uchar_to_float_0_0</sink_block_id>
+    <source_key>0</source_key>
+    <sink_key>0</sink_key>
+  </connection>
+  <connection>
     <source_block_id>blocks_sub_xx_0</source_block_id>
     <sink_block_id>blocks_threshold_ff_0</sink_block_id>
     <source_key>0</source_key>
@@ -1237,13 +1329,19 @@
   </connection>
   <connection>
     <source_block_id>digital_correlate_access_code_tag_bb_0_0</source_block_id>
-    <sink_block_id>blocks_uchar_to_float_0_0</sink_block_id>
+    <sink_block_id>blocks_skiphead_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>
   <connection>
     <source_block_id>freq_xlating_fir_filter_xxx_0</source_block_id>
     <sink_block_id>blocks_multiply_const_vxx_0</sink_block_id>
+    <source_key>0</source_key>
+    <sink_key>0</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>freq_xlating_fir_filter_xxx_0</source_block_id>
+    <sink_block_id>pad_sink_1</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>

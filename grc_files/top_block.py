@@ -1,9 +1,8 @@
 #!/usr/bin/env python2
-# -*- coding: utf-8 -*-
 ##################################################
 # GNU Radio Python Flow Graph
 # Title: Top Block
-# Generated: Fri Feb 26 12:23:16 2016
+# Generated: Sun Feb 28 19:47:20 2016
 ##################################################
 
 if __name__ == '__main__':
@@ -41,9 +40,9 @@ class top_block(gr.top_block, Qt.QWidget):
         Qt.QWidget.__init__(self)
         self.setWindowTitle("Top Block")
         try:
-            self.setWindowIcon(Qt.QIcon.fromTheme('gnuradio-grc'))
+             self.setWindowIcon(Qt.QIcon.fromTheme('gnuradio-grc'))
         except:
-            pass
+             pass
         self.top_scroll_layout = Qt.QVBoxLayout()
         self.setLayout(self.top_scroll_layout)
         self.top_scroll = Qt.QScrollArea()
@@ -150,9 +149,9 @@ class top_block(gr.top_block, Qt.QWidget):
         
         self._qtgui_time_raster_sink_x_0_win = sip.wrapinstance(self.qtgui_time_raster_sink_x_0.pyqwidget(), Qt.QWidget)
         self.top_layout.addWidget(self._qtgui_time_raster_sink_x_0_win)
-        self.fm_demodulated_source = blocks.wavfile_source("/Users/bjmclaug/source/stem_station/sample_files/N18_4827.wav", False)
+        self.fm_demodulated_source = blocks.wavfile_source("/home/brian/stem_station/sample_files/N18_4827.wav", False)
         self.blocks_throttle_0 = blocks.throttle(gr.sizeof_float*1, samp_rate,True)
-        self.blocks_file_meta_sink_0 = blocks.file_meta_sink(gr.sizeof_float*1, "/Users/bjmclaug/source/stem_station/raw_meta.dat", baud_rate, 1, blocks.GR_FILE_FLOAT, False, baud_rate * (60 * 20), "", True)
+        self.blocks_file_meta_sink_0 = blocks.file_meta_sink(gr.sizeof_float*1, "/home/brian/stem_station/raw_meta1.dat", baud_rate, 1, blocks.GR_FILE_FLOAT, False, baud_rate * (60 * 20), "", True)
         self.blocks_file_meta_sink_0.set_unbuffered(False)
         self.apt_am_demod_0 = apt_am_demod(
             parameter_apt_gain=signal_gain,
@@ -172,7 +171,6 @@ class top_block(gr.top_block, Qt.QWidget):
         self.settings = Qt.QSettings("GNU Radio", "top_block")
         self.settings.setValue("geometry", self.saveGeometry())
         event.accept()
-
 
     def get_factor_of_baud(self):
         return self.factor_of_baud
@@ -212,15 +210,14 @@ class top_block(gr.top_block, Qt.QWidget):
         self.demod_rate = demod_rate
 
 
-def main(top_block_cls=top_block, options=None):
-
+if __name__ == '__main__':
+    parser = OptionParser(option_class=eng_option, usage="%prog: [options]")
+    (options, args) = parser.parse_args()
     from distutils.version import StrictVersion
     if StrictVersion(Qt.qVersion()) >= StrictVersion("4.5.0"):
-        style = gr.prefs().get_string('qtgui', 'style', 'raster')
-        Qt.QApplication.setGraphicsSystem(style)
+        Qt.QApplication.setGraphicsSystem(gr.prefs().get_string('qtgui','style','raster'))
     qapp = Qt.QApplication(sys.argv)
-
-    tb = top_block_cls()
+    tb = top_block()
     tb.start()
     tb.show()
 
@@ -229,7 +226,4 @@ def main(top_block_cls=top_block, options=None):
         tb.wait()
     qapp.connect(qapp, Qt.SIGNAL("aboutToQuit()"), quitting)
     qapp.exec_()
-
-
-if __name__ == '__main__':
-    main()
+    tb = None  # to clean up Qt widgets

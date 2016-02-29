@@ -1,16 +1,15 @@
 import argparse
 import datetime
-import math
 import numpy as np
 import os.path
 import pmt
 import struct
 import sys
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
 from gnuradio.blocks import parse_file_metadata
 from PIL import Image, ImageOps
-from itertools import tee, izip_longest
+from itertools import izip_longest
 
 
 def grouper(n, iterable, fillvalue=None):
@@ -83,7 +82,7 @@ CAL_DATA = {'NOAA-12':{'a':[[276.597, 0.051275, 1.36e-06, 0.0, 0.0],
                        'b':[0.25, 0.25, 0.25, 0.25]}}
 
 def avhrr_prt_cal(x, a):
-    return sum([a[j] * (x ** j) for j in range(0, 5)])
+    return sum([a[j] * x ** j for j in range(0, 5)])
 
 def avhrr_bb_temp(T, b):
     return sum([T[i] * b[i] for i in range(0, 4)])
@@ -110,6 +109,7 @@ GRAYSCALE = 'L'
 parser = argparse.ArgumentParser()
 parser.add_argument('input_file', help='Raw APT demodulated data file')
 parser.add_argument('-s', '--spacecraft', default='NOAA-19', help='Spacecraft captured (for calibration)')
+parser.add_argument('-d', '--direction', default='north', help='Pass to the \'north\' or \'south\'')
 args = parser.parse_args()
 
 input_file_directory = os.path.dirname(args.input_file)
@@ -118,7 +118,7 @@ header_file = input_file_directory + os.path.basename(args.input_file) + '.hdr'
 
 spacecraft = args.spacecraft
 if spacecraft not in CAL_DATA:
-    print('Warning spacecraft {} not found in calibration data. Defaulting to NOAA-19'.format(args.spacecraft))
+    print('Warning spacecraft {} not found in calibration data. Defaulting to NOAA-19'.format(spacecraft))
     spacecraft = 'NOAA-19'
 
 has_header = os.path.isfile(header_file)
@@ -130,8 +130,6 @@ if has_header:
     print('Opening {}'.format(os.path.basename(args.input_file) + '.hdr'))
     found_headers = 0
     debug = False
-
-
     last_position = 0
     current_position = 0
     ignore_next = False
@@ -170,14 +168,11 @@ if has_header:
                 extra_info = parse_file_metadata.parse_extra_dict(extra, info, debug)
 
             if 'SyncA' in info:
-                if not(info['nitems'] % 2080 < 3 and info['nitems'] % 2080 > 0):
-                    tmp_lines = info['nitems'] // 2080
-                    extra_pixels = info['nitems'] % 2080
-                    info['index'] = current_position - (39 + double_length)
-                    syncs.append(info)
-                    double_lenth = 0
-                else:
-                    double_length = info['nitems'] % 2080
+                tmp_lines = info['nitems'] // 2080
+                extra_pixels = info['nitems'] % 2080
+                info['index'] = current_position - (39 + double_length)
+                syncs.append(info)
+                double_lenth = 0
 
             current_position = current_position + info['nitems']
 
@@ -199,6 +194,7 @@ new_pixels = []
 sync_lines = []
 max_sample = 0
 min_sample = 0
+
 if len(syncs):
     pre_syncs = pixels[0:syncs[0]['index']]
     additional_pixels = 2080 - (len(pre_syncs) % 2080)
@@ -217,13 +213,18 @@ if len(syncs):
     pixels = new_pixels
     pixels = pre_syncs + new_pixels
     last_sync = sync_lines[-1]
-    print('Syncs/Lines Ratio: {} / {} - {:.0f}%'.format(len(syncs), len(pixels), (len(syncs)/float(len(pixels))) * 100 ))
-    a_tlm = [line[tlm_frame_range['A'][0]:tlm_frame_range['A'][1]] for line in pixels[len(pre_syncs):len(pre_syncs)+last_sync]]
-    a_tlm = [sum(line)/len(line) for line in a_tlm]
-    b_tlm = [line[tlm_frame_range['B'][0]:tlm_frame_range['B'][1]] for line in pixels[len(pre_syncs):len(pre_syncs)+last_sync]]
-    b_tlm = [sum(line)/len(line) for line in b_tlm]
-    max_sample = max(max(a_tlm), max(b_tlm))
-    min_sample = min(min(a_tlm), min(b_tlm))
+    sync_ratio = len(syncs)/float(len(pixels))
+
+    if sync_ratio > 0.2:
+        a_tlm = [line[tlm_frame_range['A'][0]:tlm_frame_range['A'][1]] for line in pixels[len(pre_syncs):len(pre_syncs)+last_sync]]
+        a_tlm = [sum(line)/len(line) for line in a_tlm]
+        b_tlm = [line[tlm_frame_range['B'][0]:tlm_frame_range['B'][1]] for line in pixels[len(pre_syncs):len(pre_syncs)+last_sync]]
+        b_tlm = [sum(line)/len(line) for line in b_tlm]
+        max_sample = max(max(a_tlm), max(b_tlm))
+        min_sample = min(min(a_tlm), min(b_tlm))
+    else:
+        max_sample = max([max(line) for line in pixels])
+        min_sample = min([min(line) for line in pixels])
 else:
     print('No Syncs Found - Minimal Processing')
     max_sample = max(pixels)
@@ -231,6 +232,7 @@ else:
     pixels = [list(line) for line in grouper(2080, pixels, 0)]
 
 file_duration = datetime.timedelta(seconds = len(pixels) / 2)
+print('Capture Duration: {}'.format(file_duration))
 
 print('Scaling to 1-Byte Range')
 for i, line in enumerate(pixels):
@@ -239,7 +241,9 @@ for i, line in enumerate(pixels):
     for j, pixel in enumerate(line):
         pixels[i][j] = int(round(map(pixel, min_sample, max_sample, 0, 255)))
 
-if len(syncs):
+sync_ratio = len(syncs)/float(len(pixels))
+print('Syncs/Lines Ratio: {} / {} - {:.0f}%'.format(len(syncs), len(pixels), sync_ratio * 100))
+if len(syncs) and sync_ratio > 0.2:
     print('Processing Telemetry for {}'.format(spacecraft))
     a_tlm = [line[tlm_frame_range['A'][0]:tlm_frame_range['A'][1]] for line in pixels[len(pre_syncs):]]
     b_tlm = [line[tlm_frame_range['B'][0]:tlm_frame_range['B'][1]] for line in pixels[len(pre_syncs):]]
@@ -258,7 +262,6 @@ if len(syncs):
     print('Image Information:')
     a_info = AVHRR_CHANNELS[telemetry['a_channel']]
     b_info = AVHRR_CHANNELS[telemetry['b_channel']]
-    print('     Capture Duration: {}'.format(file_duration))
     print('     Frame A: AVHRR Channel {} - {} - {}'.format(a_info[0], a_info[2], a_info[3]))
     print('     Frame B: AVHRR Channel {} - {} - {}'.format(b_info[0], b_info[2], b_info[3]))
     print('     Wedges: {}'.format(telemetry['wedges']))
@@ -268,6 +271,13 @@ if len(syncs):
     print('     Thermistors: {}'.format(telemetry['thermistors']))
     print('     Thermistor Temps: {}'.format('  '.join(['{:.2f} K'.format(temp) for temp in telemetry['prt_temps']])))
     print('     Blackbody Reference Temp (K): {:.2f} K'.format(telemetry['bb_temp']))
+    a_space = [line[space_mark_range['A'][0]+10:space_mark_range['A'][1]-7] for line in pixels]
+    a_space = [sum(line)/len(line) for line in a_space]
+    b_space = [line[space_mark_range['B'][0]+10:space_mark_range['B'][1]-7] for line in pixels]
+    b_space = [sum(line)/len(line) for line in b_space]
+    plt.plot(a_space)
+    plt.plot(b_space)
+    plt.show()
 
 raw_images = {}
 raw_images['F'] = pixels
@@ -283,7 +293,8 @@ for image in raw_images:
     output_file = input_file_directory + input_filename_base + image + '.png'
     image = Image.new(GRAYSCALE, (width, lines))
     image.putdata(pixels)
-    image = image.rotate(180)
+    if args.direction == 'north':
+        image = image.rotate(180)
     if not len(syncs):
         image = ImageOps.equalize(image)
     image.save(output_file)
