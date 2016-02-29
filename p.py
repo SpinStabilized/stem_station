@@ -207,6 +207,9 @@ if len(syncs):
         sync_lines.append(i)
         pixel_set = pixels[sync['index']:sync['index'] + sync['nitems']]
         pixel_set = [list(line) for line in grouper(2080, pixel_set, pixel_set[-1])]
+        if all(x == pixel_set[-1][0] for x in pixel_set[-1]):
+            print('extra_line')
+            del pixel_set[-1]
         i += len(pixel_set)
         new_pixels.extend(pixel_set)
 
@@ -279,9 +282,9 @@ if len(syncs) and sync_ratio > 0.05:
     a_space = [sum(line)/len(line) for line in a_space]
     b_space = [line[space_mark_range['B'][0]+10:space_mark_range['B'][1]-7] for line in pixels]
     b_space = [sum(line)/len(line) for line in b_space]
-    plt.plot(a_space)
-    plt.plot(b_space)
-    plt.show()
+    # plt.plot(a_space)
+    # plt.plot(b_space)
+    # plt.show()
 
 raw_images = {}
 raw_images['F'] = pixels
