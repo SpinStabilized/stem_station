@@ -135,6 +135,33 @@
     </param>
     <param>
       <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(448, 115)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>processing_rate</value>
+    </param>
+    <param>
+      <key>value</key>
+      <value>256000</value>
+    </param>
+  </block>
+  <block>
+    <key>variable</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
       <value>1</value>
     </param>
     <param>
@@ -178,7 +205,7 @@
     </param>
     <param>
       <key>value</key>
-      <value>256e3</value>
+      <value>2.048e6</value>
     </param>
   </block>
   <block>
@@ -205,7 +232,7 @@
     </param>
     <param>
       <key>value</key>
-      <value>0</value>
+      <value>137.1e6</value>
     </param>
   </block>
   <block>
@@ -269,6 +296,33 @@
     <param>
       <key>widget</key>
       <value>counter</value>
+    </param>
+  </block>
+  <block>
+    <key>variable</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>1</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(144, 115)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>tuner_frequency</value>
+    </param>
+    <param>
+      <key>value</key>
+      <value>satellite_frequency - (rf_samp_rate / 4)</value>
     </param>
   </block>
   <block>
@@ -409,7 +463,7 @@
     </param>
     <param>
       <key>gain</key>
-      <value>(rf_samp_rate // 2)/(2*math.pi*fsk_deviation_hz/8.0)</value>
+      <value>(processing_rate // 2)/(2*math.pi*fsk_deviation_hz/8.0)</value>
     </param>
     <param>
       <key>id</key>
@@ -562,7 +616,7 @@
     </param>
     <param>
       <key>parameter_samp_rate</key>
-      <value>rf_samp_rate / 2</value>
+      <value>processing_rate / 2</value>
     </param>
   </block>
   <block>
@@ -636,7 +690,7 @@
     </param>
     <param>
       <key>file</key>
-      <value>/home/brian/stem_station/noaa18_s.dat</value>
+      <value>/home/brian/stem_station/noaa18_s_pb.dat</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -695,7 +749,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>True</value>
+      <value>0</value>
     </param>
     <param>
       <key>file</key>
@@ -742,15 +796,15 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>0</value>
+      <value>1</value>
     </param>
     <param>
       <key>file</key>
-      <value>/home/brian/Downloads/noaa-12_256k.dat</value>
+      <value>/media/brian/Data/noaa18_s_rf.bin</value>
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(168, 315)</value>
+      <value>(8, 315)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -810,57 +864,6 @@
     <param>
       <key>id</key>
       <value>blocks_float_to_complex_0</value>
-    </param>
-    <param>
-      <key>maxoutbuf</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>minoutbuf</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>vlen</key>
-      <value>1</value>
-    </param>
-  </block>
-  <block>
-    <key>blocks_multiply_const_vxx</key>
-    <param>
-      <key>alias</key>
-      <value></value>
-    </param>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>const</key>
-      <value>0.00001</value>
-    </param>
-    <param>
-      <key>affinity</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(544, 323)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>blocks_multiply_const_vxx_1</value>
-    </param>
-    <param>
-      <key>type</key>
-      <value>complex</value>
     </param>
     <param>
       <key>maxoutbuf</key>
@@ -950,11 +953,11 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>0</value>
+      <value>1</value>
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(384, 323)</value>
+      <value>(208, 323)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -978,7 +981,7 @@
     </param>
     <param>
       <key>samples_per_second</key>
-      <value>rf_samp_rate</value>
+      <value>processing_rate</value>
     </param>
     <param>
       <key>type</key>
@@ -987,6 +990,65 @@
     <param>
       <key>vlen</key>
       <value>1</value>
+    </param>
+  </block>
+  <block>
+    <key>freq_xlating_fir_filter_xxx</key>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>center_freq</key>
+      <value>satellite_frequency - tuner_frequency</value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>affinity</key>
+      <value></value>
+    </param>
+    <param>
+      <key>decim</key>
+      <value>int(rf_samp_rate // processing_rate)</value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(480, 211)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>freq_xlating_fir_filter_xxx_0</value>
+    </param>
+    <param>
+      <key>maxoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>minoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>samp_rate</key>
+      <value>rf_samp_rate</value>
+    </param>
+    <param>
+      <key>taps</key>
+      <value>firdes.low_pass(1, rf_samp_rate, (processing_rate // 2), (processing_rate // 4))</value>
+    </param>
+    <param>
+      <key>type</key>
+      <value>ccc</value>
     </param>
   </block>
   <block>
@@ -1084,7 +1146,7 @@
     </param>
     <param>
       <key>samp_rate</key>
-      <value>rf_samp_rate</value>
+      <value>processing_rate</value>
     </param>
     <param>
       <key>width</key>
@@ -1159,7 +1221,7 @@
     </param>
     <param>
       <key>samp_rate</key>
-      <value>rf_samp_rate // 2</value>
+      <value>processing_rate // 2</value>
     </param>
     <param>
       <key>width</key>
@@ -1168,6 +1230,49 @@
     <param>
       <key>win</key>
       <value>firdes.WIN_HAMMING</value>
+    </param>
+  </block>
+  <block>
+    <key>parameter</key>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(632, 323)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>parameter_0</value>
+    </param>
+    <param>
+      <key>label</key>
+      <value></value>
+    </param>
+    <param>
+      <key>short_id</key>
+      <value></value>
+    </param>
+    <param>
+      <key>type</key>
+      <value></value>
+    </param>
+    <param>
+      <key>value</key>
+      <value>0</value>
     </param>
   </block>
   <block>
@@ -1182,7 +1287,7 @@
     </param>
     <param>
       <key>bw</key>
-      <value>rf_samp_rate // 2</value>
+      <value>processing_rate // 2</value>
     </param>
     <param>
       <key>alias</key>
@@ -1501,7 +1606,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(584, 515)</value>
+      <value>(608, 547)</value>
     </param>
     <param>
       <key>gui_hint</key>
@@ -1741,7 +1846,7 @@
     </param>
     <param>
       <key>ymin</key>
-      <value>-100</value>
+      <value>-40</value>
     </param>
   </block>
   <block>
@@ -2255,7 +2360,7 @@
     </param>
     <param>
       <key>srate</key>
-      <value>rf_samp_rate // 2</value>
+      <value>processing_rate // 2</value>
     </param>
     <param>
       <key>tr_chan</key>
@@ -2669,7 +2774,7 @@
     <key>qtgui_waterfall_sink_x</key>
     <param>
       <key>bw</key>
-      <value>rf_samp_rate // 2</value>
+      <value>processing_rate // 2</value>
     </param>
     <param>
       <key>alias</key>
@@ -2951,7 +3056,7 @@
     </param>
     <param>
       <key>dc_offset_mode0</key>
-      <value>2</value>
+      <value>0</value>
     </param>
     <param>
       <key>corr0</key>
@@ -2959,11 +3064,11 @@
     </param>
     <param>
       <key>freq0</key>
-      <value>satellite_frequency</value>
+      <value>tuner_frequency</value>
     </param>
     <param>
       <key>gain_mode0</key>
-      <value>False</value>
+      <value>True</value>
     </param>
     <param>
       <key>if_gain0</key>
@@ -2971,7 +3076,7 @@
     </param>
     <param>
       <key>iq_balance_mode0</key>
-      <value>2</value>
+      <value>0</value>
     </param>
     <param>
       <key>gain0</key>
@@ -4231,11 +4336,11 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>1</value>
+      <value>0</value>
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(464, 139)</value>
+      <value>(184, 171)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -4691,7 +4796,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>1</value>
+      <value>0</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -4718,11 +4823,11 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>0</value>
+      <value>1</value>
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(712, 323)</value>
+      <value>(392, 323)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -4837,12 +4942,6 @@
     <sink_key>0</sink_key>
   </connection>
   <connection>
-    <source_block_id>blocks_multiply_const_vxx_1</source_block_id>
-    <sink_block_id>virtual_sink_0_0</sink_block_id>
-    <source_key>0</source_key>
-    <sink_key>0</sink_key>
-  </connection>
-  <connection>
     <source_block_id>blocks_socket_pdu_0</source_block_id>
     <sink_block_id>rigcontrol_rigcontrol_0</sink_block_id>
     <source_key>pdus</source_key>
@@ -4850,7 +4949,19 @@
   </connection>
   <connection>
     <source_block_id>blocks_throttle_0</source_block_id>
-    <sink_block_id>blocks_multiply_const_vxx_1</sink_block_id>
+    <sink_block_id>virtual_sink_0_0</sink_block_id>
+    <source_key>0</source_key>
+    <sink_key>0</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>freq_xlating_fir_filter_xxx_0</source_block_id>
+    <sink_block_id>blocks_file_sink_0</sink_block_id>
+    <source_key>0</source_key>
+    <sink_key>0</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>freq_xlating_fir_filter_xxx_0</source_block_id>
+    <sink_block_id>virtual_sink_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>
@@ -4898,13 +5009,7 @@
   </connection>
   <connection>
     <source_block_id>rtlsdr_source_1</source_block_id>
-    <sink_block_id>blocks_file_sink_0</sink_block_id>
-    <source_key>0</source_key>
-    <sink_key>0</sink_key>
-  </connection>
-  <connection>
-    <source_block_id>rtlsdr_source_1</source_block_id>
-    <sink_block_id>virtual_sink_0</sink_block_id>
+    <sink_block_id>freq_xlating_fir_filter_xxx_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>

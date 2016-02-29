@@ -187,7 +187,8 @@ samples_found = len(raw_bytes) // BYTES_PER_FLOAT
 
 unpack_format = '<' + ('f' * samples_found)
 pixels = list(struct.unpack(unpack_format, raw_bytes))
-
+print 'Raw Min: {} -- Raw Max: {}'.format(min(pixels), max(pixels))
+print 'Raw Signal Mean: {}'.format(sum(pixels)/len(pixels))
 print('Finding Sync Signals')
 pre_syncs = []
 new_pixels = []
