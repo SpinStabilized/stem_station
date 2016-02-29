@@ -110,6 +110,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('input_file', help='Raw APT demodulated data file')
 parser.add_argument('-s', '--spacecraft', default='NOAA-19', help='Spacecraft captured (for calibration)')
 parser.add_argument('-d', '--direction', default='north', help='Pass to the \'north\' or \'south\'')
+parser.add_argument('-a', '--all', action='store_true', default=False, help='Show all data lines, not just aligned')
 args = parser.parse_args()
 
 input_file_directory = os.path.dirname(args.input_file)
@@ -208,16 +209,15 @@ if len(syncs):
         pixel_set = pixels[sync['index']:sync['index'] + sync['nitems']]
         pixel_set = [list(line) for line in grouper(2080, pixel_set, pixel_set[-1])]
         if all(x == pixel_set[-1][0] for x in pixel_set[-1]):
-            print('extra_line')
             del pixel_set[-1]
         i += len(pixel_set)
         new_pixels.extend(pixel_set)
 
     aligned_start = len(pre_syncs)
     pixels = new_pixels
-    # pixels = pre_syncs + new_pixels
-    last_sync = sync_lines[-1]
     sync_ratio = len(syncs)/float(len(pixels))
+    if args.all:
+        pixels = pre_syncs + new_pixels
 
     if sync_ratio > 0.05:
         # a_tlm = [line[tlm_frame_range['A'][0]:tlm_frame_range['A'][1]] for line in pixels[len(pre_syncs):len(pre_syncs)+last_sync]]
