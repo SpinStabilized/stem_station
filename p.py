@@ -188,8 +188,6 @@ samples_found = len(raw_bytes) // BYTES_PER_FLOAT
 
 unpack_format = '<' + ('f' * samples_found)
 pixels = list(struct.unpack(unpack_format, raw_bytes))
-print 'Raw Min: {} -- Raw Max: {}'.format(min(pixels), max(pixels))
-print 'Raw Signal Mean: {}'.format(sum(pixels)/len(pixels))
 print('Finding Sync Signals')
 pre_syncs = []
 new_pixels = []
@@ -297,7 +295,7 @@ for image in raw_images:
     width = len(raw_images[image][0])
     pixels = [item for sublist in raw_images[image] for item in sublist]
 
-    output_file = input_file_directory + input_filename_base + image + '.png'
+    output_file = input_file_directory + 'output/' + input_filename_base + image + '.png'
     image = Image.new(GRAYSCALE, (width, lines))
     image.putdata(pixels)
     if args.direction == 'north':
