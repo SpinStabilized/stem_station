@@ -11,16 +11,10 @@ import requests
 import subprocess
 import os
 import re
-from datetime import datetime, timedelta
 
+from datetime import datetime, timedelta
 from lxml import html
 
-def get_dataset_list():
-    # dataset_page = requests.get('http://www.celestrak.com/NORAD/elements/')
-    dataset_page = requests.get(Celestrak.BASE_URL)
-    page_tree = html.fromstring(dataset_page.content)
-    dataset_files = page_tree.xpath('/html/body//a[contains(@href,"txt")]/@href')
-    return [dataset.split('.')[0] for dataset in dataset_files]
 
 class Celestrak(object):
     '''Object to interface with TLE raw datafiles.'''
@@ -144,9 +138,8 @@ class Celestrak(object):
             tle_raw = None
 
             ephemeris_file = requests.get(url)
-            tle_raw = ephemeris_file.text.decode(
-                    self.DATASET_ENCODING).split(self.TLE_FILE_LINE_ENDING)
-            print tle_raw
+            tle_raw = ephemeris_file.text.encode(
+                    self.DATASET_ENCODING, 'ignore').split(self.TLE_FILE_LINE_ENDING)
 
             # check for and remove any extra lines at the end
             tle_raw = tle_raw[:(len(tle_raw) -
