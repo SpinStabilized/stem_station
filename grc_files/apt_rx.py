@@ -3,7 +3,7 @@
 # GNU Radio Python Flow Graph
 # Title: NOAA APT Satellite Receiver
 # Author: Brian McLaughlin
-# Generated: Mon Feb 29 14:05:42 2016
+# Generated: Wed Mar  2 18:55:56 2016
 ##################################################
 import threading
 
@@ -22,6 +22,7 @@ import sys
 sys.path.append(os.environ.get('GRC_HIER_PATH', os.path.expanduser('~/.grc_gnuradio')))
 
 from PyQt4 import Qt
+from PyQt4.QtCore import QObject, pyqtSlot
 from apt_am_demod import apt_am_demod  # grc-generated hier_block
 from gnuradio import analog
 from gnuradio import blocks
@@ -32,16 +33,14 @@ from gnuradio import gr, blocks
 from gnuradio import qtgui
 from gnuradio.eng_option import eng_option
 from gnuradio.filter import firdes
-from gnuradio.qtgui import Range, RangeWidget
 from optparse import OptionParser
 import math
-import rigcontrol
 import sip
 
 
 class apt_rx(gr.top_block, Qt.QWidget):
 
-    def __init__(self, parameter_0=0):
+    def __init__(self):
         gr.top_block.__init__(self, "NOAA APT Satellite Receiver")
         Qt.QWidget.__init__(self)
         self.setWindowTitle("NOAA APT Satellite Receiver")
@@ -67,21 +66,20 @@ class apt_rx(gr.top_block, Qt.QWidget):
         self._lock = threading.RLock()
 
         ##################################################
-        # Parameters
-        ##################################################
-        self.parameter_0 = parameter_0
-
-        ##################################################
         # Variables
         ##################################################
-        self.satellite_frequency = satellite_frequency = 137.1e6
+        self.satellite_select = satellite_select = 137.62
+        self.valid_gains = valid_gains = [0.0, 0.9, 1.4, 2.7, 3.7, 7.7, 8.7, 12.5, 14.4, 15.7, 16.6, 19.7, 20.7, 22.9, 25.4, 28.0, 29.7, 32.8, 33.8, 36.4, 37.2, 38.6, 40.2, 42.1, 43.4, 43.9, 44.5, 48.0, 49.6]
+        self.satellite_frequency = satellite_frequency = satellite_select * 1e6
         self.rf_samp_rate = rf_samp_rate = 2.048e6
-        self.variable_qtgui_label_0 = variable_qtgui_label_0 = '{:.6f} MHz'.format(satellite_frequency/1e6)
+        self.max_doppler = max_doppler = 3000
+        self.fsk_deviation_hz = fsk_deviation_hz = 17000
+        self.am_carrier = am_carrier = 2400
         self.tuner_frequency = tuner_frequency = satellite_frequency - (rf_samp_rate / 4)
-        self.signal_gain = signal_gain = 1
+        self.rf_gain = rf_gain = valid_gains[-1]
         self.rail_level = rail_level = 0.5
         self.processing_rate = processing_rate = 256000
-        self.fsk_deviation_hz = fsk_deviation_hz = 17000
+        self.fm_bandwidth = fm_bandwidth = (2 * (fsk_deviation_hz + am_carrier)) + max_doppler
         self.baud_rate = baud_rate = 4160
 
         ##################################################
@@ -133,29 +131,34 @@ class apt_rx(gr.top_block, Qt.QWidget):
         self.tabs_apt_data_layout_1.addLayout(self.tabs_apt_data_grid_layout_1)
         self.tabs_apt_data.addTab(self.tabs_apt_data_widget_1, "Raster")
         self.tabs_top_layout_1.addWidget(self.tabs_apt_data)
-        self._signal_gain_range = Range(1, 10, 0.1, 1, 200)
-        self._signal_gain_win = RangeWidget(self._signal_gain_range, self.set_signal_gain, "Signal Gain", "counter", float)
-        self.top_grid_layout.addWidget(self._signal_gain_win, 0, 1)
-        self._variable_qtgui_label_0_tool_bar = Qt.QToolBar(self)
-        
-        if None:
-          self._variable_qtgui_label_0_formatter = None
-        else:
-          self._variable_qtgui_label_0_formatter = lambda x: x
-        
-        self._variable_qtgui_label_0_tool_bar.addWidget(Qt.QLabel("Satellite Frequency"+": "))
-        self._variable_qtgui_label_0_label = Qt.QLabel(str(self._variable_qtgui_label_0_formatter(self.variable_qtgui_label_0)))
-        self._variable_qtgui_label_0_tool_bar.addWidget(self._variable_qtgui_label_0_label)
-        self.top_grid_layout.addWidget(self._variable_qtgui_label_0_tool_bar, 0, 0)
-          
-        self.rigcontrol_rigcontrol_0 = rigcontrol.rigcontrol(
-            self.set_satellite_frequency if "satellite_frequency" in locals() else None,
-            self.get_satellite_frequency if "satellite_frequency" in locals() else None,
-            False)
+        self._satellite_select_options = [137.62, 137.9125, 137.1]
+        self._satellite_select_labels = ['NOAA 15 (137.62 MHz)', 'NOAA 18 (137.9125 MHz)', 'NOAA 19 (137.1 MHz)']
+        self._satellite_select_tool_bar = Qt.QToolBar(self)
+        self._satellite_select_tool_bar.addWidget(Qt.QLabel("Satellite Select"+": "))
+        self._satellite_select_combo_box = Qt.QComboBox()
+        self._satellite_select_tool_bar.addWidget(self._satellite_select_combo_box)
+        for label in self._satellite_select_labels: self._satellite_select_combo_box.addItem(label)
+        self._satellite_select_callback = lambda i: Qt.QMetaObject.invokeMethod(self._satellite_select_combo_box, "setCurrentIndex", Qt.Q_ARG("int", self._satellite_select_options.index(i)))
+        self._satellite_select_callback(self.satellite_select)
+        self._satellite_select_combo_box.currentIndexChanged.connect(
+        	lambda i: self.set_satellite_select(self._satellite_select_options[i]))
+        self.top_grid_layout.addWidget(self._satellite_select_tool_bar, 0, 0, 1, 1)
+        self._rf_gain_options = valid_gains
+        self._rf_gain_labels = map(str, self._rf_gain_options)
+        self._rf_gain_tool_bar = Qt.QToolBar(self)
+        self._rf_gain_tool_bar.addWidget(Qt.QLabel("RF Gain"+": "))
+        self._rf_gain_combo_box = Qt.QComboBox()
+        self._rf_gain_tool_bar.addWidget(self._rf_gain_combo_box)
+        for label in self._rf_gain_labels: self._rf_gain_combo_box.addItem(label)
+        self._rf_gain_callback = lambda i: Qt.QMetaObject.invokeMethod(self._rf_gain_combo_box, "setCurrentIndex", Qt.Q_ARG("int", self._rf_gain_options.index(i)))
+        self._rf_gain_callback(self.rf_gain)
+        self._rf_gain_combo_box.currentIndexChanged.connect(
+        	lambda i: self.set_rf_gain(self._rf_gain_options[i]))
+        self.top_grid_layout.addWidget(self._rf_gain_tool_bar, 0, 1 , 1, 1)
         self.qtgui_waterfall_sink_x_0 = qtgui.waterfall_sink_c(
         	1024, #size
         	firdes.WIN_BLACKMAN_hARRIS, #wintype
-        	0, #fc
+        	satellite_frequency, #fc
         	processing_rate // 2, #bw
         	"", #name
                 1 #number of inputs
@@ -326,7 +329,7 @@ class apt_rx(gr.top_block, Qt.QWidget):
         self.qtgui_freq_sink_x_1 = qtgui.freq_sink_c(
         	1024, #size
         	firdes.WIN_BLACKMAN_hARRIS, #wintype
-        	0, #fc
+        	satellite_frequency, #fc
         	processing_rate // 2, #bw
         	"", #name
         	2 #number of inputs
@@ -365,18 +368,17 @@ class apt_rx(gr.top_block, Qt.QWidget):
         self._qtgui_freq_sink_x_1_win = sip.wrapinstance(self.qtgui_freq_sink_x_1.pyqwidget(), Qt.QWidget)
         self.tabs_rf_layout_0.addWidget(self._qtgui_freq_sink_x_1_win)
         self.low_pass_filter_0_0 = filter.fir_filter_ccf(1, firdes.low_pass(
-        	4, processing_rate // 2, 30e3, 5e3, firdes.WIN_HAMMING, 6.76))
+        	1, processing_rate // 2, fm_bandwidth + 1e3, 1e3, firdes.WIN_HAMMING, 6.76))
         self.low_pass_filter_0 = filter.fir_filter_ccf(2, firdes.low_pass(
-        	1, processing_rate, 40e3, 40e3, firdes.WIN_HAMMING, 6.76))
+        	1, processing_rate, 60e3, 15e3, firdes.WIN_HAMMING, 6.76))
         self.blocks_throttle_0 = blocks.throttle(gr.sizeof_gr_complex*1, processing_rate,True)
-        self.blocks_socket_pdu_0 = blocks.socket_pdu("TCP_SERVER", "", "4532", 10000, False)
         self.blocks_float_to_complex_0 = blocks.float_to_complex(1)
         self.blocks_file_source_0 = blocks.file_source(gr.sizeof_gr_complex*1, "/media/brian/Data/noaa18_s_rf.bin", False)
         self.blocks_file_meta_sink_0 = blocks.file_meta_sink(gr.sizeof_float*1, "/home/brian/stem_station/noaa18_s_pb.dat", baud_rate, 1, blocks.GR_FILE_FLOAT, False, baud_rate * (60 * 20), "", True)
         self.blocks_file_meta_sink_0.set_unbuffered(False)
         self.blocks_complex_to_float_0 = blocks.complex_to_float(1)
         self.apt_am_demod_0 = apt_am_demod(
-            parameter_apt_gain=signal_gain,
+            parameter_apt_gain=1,
             parameter_samp_rate=processing_rate / 2,
         )
         self.analog_rail_ff_0_0 = analog.rail_ff(-rail_level, rail_level)
@@ -388,8 +390,6 @@ class apt_rx(gr.top_block, Qt.QWidget):
         ##################################################
         # Connections
         ##################################################
-        self.msg_connect((self.blocks_socket_pdu_0, 'pdus'), (self.rigcontrol_rigcontrol_0, 'in'))    
-        self.msg_connect((self.rigcontrol_rigcontrol_0, 'out'), (self.blocks_socket_pdu_0, 'pdus'))    
         self.connect((self.analog_agc3_xx_0, 0), (self.blocks_complex_to_float_0, 0))    
         self.connect((self.analog_quadrature_demod_cf_0, 0), (self.apt_am_demod_0, 0))    
         self.connect((self.analog_rail_ff_0, 0), (self.blocks_float_to_complex_0, 0))    
@@ -414,12 +414,22 @@ class apt_rx(gr.top_block, Qt.QWidget):
         self.settings.setValue("geometry", self.saveGeometry())
         event.accept()
 
-    def get_parameter_0(self):
-        return self.parameter_0
+    def get_satellite_select(self):
+        return self.satellite_select
 
-    def set_parameter_0(self, parameter_0):
+    def set_satellite_select(self, satellite_select):
         with self._lock:
-            self.parameter_0 = parameter_0
+            self.satellite_select = satellite_select
+            self.set_satellite_frequency(self.satellite_select * 1e6)
+            self._satellite_select_callback(self.satellite_select)
+
+    def get_valid_gains(self):
+        return self.valid_gains
+
+    def set_valid_gains(self, valid_gains):
+        with self._lock:
+            self.valid_gains = valid_gains
+            self.set_rf_gain(self.valid_gains[-1])
 
     def get_satellite_frequency(self):
         return self.satellite_frequency
@@ -428,7 +438,8 @@ class apt_rx(gr.top_block, Qt.QWidget):
         with self._lock:
             self.satellite_frequency = satellite_frequency
             self.set_tuner_frequency(self.satellite_frequency - (self.rf_samp_rate / 4))
-            self.set_variable_qtgui_label_0(self._variable_qtgui_label_0_formatter('{:.6f} MHz'.format(self.satellite_frequency/1e6)))
+            self.qtgui_freq_sink_x_1.set_frequency_range(self.satellite_frequency, self.processing_rate // 2)
+            self.qtgui_waterfall_sink_x_0.set_frequency_range(self.satellite_frequency, self.processing_rate // 2)
 
     def get_rf_samp_rate(self):
         return self.rf_samp_rate
@@ -438,13 +449,30 @@ class apt_rx(gr.top_block, Qt.QWidget):
             self.rf_samp_rate = rf_samp_rate
             self.set_tuner_frequency(self.satellite_frequency - (self.rf_samp_rate / 4))
 
-    def get_variable_qtgui_label_0(self):
-        return self.variable_qtgui_label_0
+    def get_max_doppler(self):
+        return self.max_doppler
 
-    def set_variable_qtgui_label_0(self, variable_qtgui_label_0):
+    def set_max_doppler(self, max_doppler):
         with self._lock:
-            self.variable_qtgui_label_0 = variable_qtgui_label_0
-            Qt.QMetaObject.invokeMethod(self._variable_qtgui_label_0_label, "setText", Qt.Q_ARG("QString", str(self.variable_qtgui_label_0)))
+            self.max_doppler = max_doppler
+            self.set_fm_bandwidth((2 * (self.fsk_deviation_hz + self.am_carrier)) + self.max_doppler)
+
+    def get_fsk_deviation_hz(self):
+        return self.fsk_deviation_hz
+
+    def set_fsk_deviation_hz(self, fsk_deviation_hz):
+        with self._lock:
+            self.fsk_deviation_hz = fsk_deviation_hz
+            self.set_fm_bandwidth((2 * (self.fsk_deviation_hz + self.am_carrier)) + self.max_doppler)
+            self.analog_quadrature_demod_cf_0.set_gain((self.processing_rate // 2)/(2*math.pi*self.fsk_deviation_hz/8.0))
+
+    def get_am_carrier(self):
+        return self.am_carrier
+
+    def set_am_carrier(self, am_carrier):
+        with self._lock:
+            self.am_carrier = am_carrier
+            self.set_fm_bandwidth((2 * (self.fsk_deviation_hz + self.am_carrier)) + self.max_doppler)
 
     def get_tuner_frequency(self):
         return self.tuner_frequency
@@ -453,13 +481,13 @@ class apt_rx(gr.top_block, Qt.QWidget):
         with self._lock:
             self.tuner_frequency = tuner_frequency
 
-    def get_signal_gain(self):
-        return self.signal_gain
+    def get_rf_gain(self):
+        return self.rf_gain
 
-    def set_signal_gain(self, signal_gain):
+    def set_rf_gain(self, rf_gain):
         with self._lock:
-            self.signal_gain = signal_gain
-            self.apt_am_demod_0.set_parameter_apt_gain(self.signal_gain)
+            self.rf_gain = rf_gain
+            self._rf_gain_callback(self.rf_gain)
 
     def get_rail_level(self):
         return self.rail_level
@@ -481,19 +509,19 @@ class apt_rx(gr.top_block, Qt.QWidget):
             self.analog_quadrature_demod_cf_0.set_gain((self.processing_rate // 2)/(2*math.pi*self.fsk_deviation_hz/8.0))
             self.apt_am_demod_0.set_parameter_samp_rate(self.processing_rate / 2)
             self.blocks_throttle_0.set_sample_rate(self.processing_rate)
-            self.low_pass_filter_0.set_taps(firdes.low_pass(1, self.processing_rate, 40e3, 40e3, firdes.WIN_HAMMING, 6.76))
-            self.low_pass_filter_0_0.set_taps(firdes.low_pass(4, self.processing_rate // 2, 30e3, 5e3, firdes.WIN_HAMMING, 6.76))
-            self.qtgui_freq_sink_x_1.set_frequency_range(0, self.processing_rate // 2)
+            self.low_pass_filter_0.set_taps(firdes.low_pass(1, self.processing_rate, 60e3, 15e3, firdes.WIN_HAMMING, 6.76))
+            self.low_pass_filter_0_0.set_taps(firdes.low_pass(1, self.processing_rate // 2, self.fm_bandwidth + 1e3, 1e3, firdes.WIN_HAMMING, 6.76))
+            self.qtgui_freq_sink_x_1.set_frequency_range(self.satellite_frequency, self.processing_rate // 2)
             self.qtgui_time_sink_x_0.set_samp_rate(self.processing_rate // 2)
-            self.qtgui_waterfall_sink_x_0.set_frequency_range(0, self.processing_rate // 2)
+            self.qtgui_waterfall_sink_x_0.set_frequency_range(self.satellite_frequency, self.processing_rate // 2)
 
-    def get_fsk_deviation_hz(self):
-        return self.fsk_deviation_hz
+    def get_fm_bandwidth(self):
+        return self.fm_bandwidth
 
-    def set_fsk_deviation_hz(self, fsk_deviation_hz):
+    def set_fm_bandwidth(self, fm_bandwidth):
         with self._lock:
-            self.fsk_deviation_hz = fsk_deviation_hz
-            self.analog_quadrature_demod_cf_0.set_gain((self.processing_rate // 2)/(2*math.pi*self.fsk_deviation_hz/8.0))
+            self.fm_bandwidth = fm_bandwidth
+            self.low_pass_filter_0_0.set_taps(firdes.low_pass(1, self.processing_rate // 2, self.fm_bandwidth + 1e3, 1e3, firdes.WIN_HAMMING, 6.76))
 
     def get_baud_rate(self):
         return self.baud_rate

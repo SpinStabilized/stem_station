@@ -28,49 +28,6 @@ class Celestrak(object):
     '''The base URL for the Celestrak datasets.'''
     BASE_URL = 'http://www.celestrak.com/NORAD/elements/'
 
-    '''The list of known datasets hosted on Celestrak.'''
-    DATASETS = ['amateur',
-                'argos',
-                'beidou',
-                'cubesat',
-                'dmc',
-                'education',
-                'engineering',
-                'galileo',
-                'geo',
-                'geodetic',
-                'glo-ops',
-                'globalstar',
-                'goes',
-                'gorizont',
-                'gps-ops',
-                'intelsat',
-                'iridium',
-                'military',
-                'molniya',
-                'musson',
-                'nnss',
-                'noaa',
-                'orbcomm',
-                'other',
-                'other-comm',
-                'radar',
-                'raduga',
-                'resource',
-                'sarsat',
-                'sbas',
-                'science',
-                'stations',
-                'tdrss',
-                'tle-new',
-                'visual',
-                'weather',
-                'x-comm',
-                '1999-025',
-                'iridium-33-debris',
-                'cosmos-2251-debris',
-                '2012-044']
-
     '''Encoding for the Celestrak data files.'''
     DATASET_ENCODING = 'ASCII'
 
@@ -89,9 +46,8 @@ class Celestrak(object):
         :type satellites: :class:`list`
 
         '''
-
         if not dataset:
-            self.dataset = self.DATASETS
+            self.dataset = self.datasets()
         else:
             self.dataset = dataset
 
@@ -100,6 +56,13 @@ class Celestrak(object):
         self.last_update = None
 
         self.update_tle()
+
+    def datasets(self):
+        '''Get the list of known datasets hosted on Celestrak.'''
+        dataset_page = requests.get(self.BASE_URL)
+        page_tree = html.fromstring(dataset_page.content)
+        dataset_files = page_tree.xpath('/html/body//a[contains(@href,"txt")]/@href')
+        return [dataset.split('.')[0] for dataset in dataset_files]
 
     @property
     def dataset(self):
@@ -314,7 +277,6 @@ class TLEItem(object):
 
 
 if __name__ == '__main__':
-    # db = Celestrak(['amateur'])
-    # for sat in db.tle:
-    #     print('Satellite: {} / Alternate Name: {}'.format(sat.name, sat.alt))
-    print get_dataset_list()
+    db = Celestrak(['noaa'])
+    for sat in db.tle:
+        print('Satellite: {} / Alternate Name: {}'.format(sat.name, sat.alt))
