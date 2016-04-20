@@ -1,9 +1,10 @@
 #!/usr/bin/env python2
+# -*- coding: utf-8 -*-
 ##################################################
 # GNU Radio Python Flow Graph
 # Title: NOAA APT Satellite Receiver
 # Author: Brian McLaughlin
-# Generated: Wed Mar  2 18:55:56 2016
+# Generated: Thu Mar 31 13:26:49 2016
 ##################################################
 import threading
 
@@ -45,9 +46,9 @@ class apt_rx(gr.top_block, Qt.QWidget):
         Qt.QWidget.__init__(self)
         self.setWindowTitle("NOAA APT Satellite Receiver")
         try:
-             self.setWindowIcon(Qt.QIcon.fromTheme('gnuradio-grc'))
+            self.setWindowIcon(Qt.QIcon.fromTheme('gnuradio-grc'))
         except:
-             pass
+            pass
         self.top_scroll_layout = Qt.QVBoxLayout()
         self.setLayout(self.top_scroll_layout)
         self.top_scroll = Qt.QScrollArea()
@@ -169,7 +170,7 @@ class apt_rx(gr.top_block, Qt.QWidget):
         if not False:
           self.qtgui_waterfall_sink_x_0.disable_legend()
         
-        if complex == type(float()):
+        if "complex" == "float" or "complex" == "msg_float":
           self.qtgui_waterfall_sink_x_0.set_plot_pos_half(not True)
         
         labels = ["", "", "", "", "",
@@ -285,6 +286,36 @@ class apt_rx(gr.top_block, Qt.QWidget):
         
         self._qtgui_time_sink_x_0_win = sip.wrapinstance(self.qtgui_time_sink_x_0.pyqwidget(), Qt.QWidget)
         self.tabs_rf_layout_2.addWidget(self._qtgui_time_sink_x_0_win)
+        self.qtgui_time_raster_sink_x_0 = qtgui.time_raster_sink_f(
+        	baud_rate,
+        	120*3,
+        	baud_rate // 2,
+        	([]),
+        	([]),
+        	"",
+        	1,
+        	)
+        
+        self.qtgui_time_raster_sink_x_0.set_update_time(0.10)
+        self.qtgui_time_raster_sink_x_0.set_intensity_range(-0.5, 1.5)
+        self.qtgui_time_raster_sink_x_0.enable_grid(False)
+        
+        labels = ["", "", "", "", "",
+                  "", "", "", "", ""]
+        colors = [1, 0, 0, 0, 0,
+                  0, 0, 0, 0, 0]
+        alphas = [1.0, 1.0, 1.0, 1.0, 1.0,
+                  1.0, 1.0, 1.0, 1.0, 1.0]
+        for i in xrange(1):
+            if len(labels[i]) == 0:
+                self.qtgui_time_raster_sink_x_0.set_line_label(i, "Data {0}".format(i))
+            else:
+                self.qtgui_time_raster_sink_x_0.set_line_label(i, labels[i])
+            self.qtgui_time_raster_sink_x_0.set_color_map(i, colors[i])
+            self.qtgui_time_raster_sink_x_0.set_line_alpha(i, alphas[i])
+        
+        self._qtgui_time_raster_sink_x_0_win = sip.wrapinstance(self.qtgui_time_raster_sink_x_0.pyqwidget(), Qt.QWidget)
+        self.tabs_apt_data_layout_1.addWidget(self._qtgui_time_raster_sink_x_0_win)
         self.qtgui_freq_sink_x_1_0 = qtgui.freq_sink_c(
         	1024, #size
         	firdes.WIN_BLACKMAN_hARRIS, #wintype
@@ -304,7 +335,7 @@ class apt_rx(gr.top_block, Qt.QWidget):
         if not True:
           self.qtgui_freq_sink_x_1_0.disable_legend()
         
-        if complex == type(float()):
+        if "complex" == "float" or "complex" == "msg_float":
           self.qtgui_freq_sink_x_1_0.set_plot_pos_half(not True)
         
         labels = ["Raw", "AGC Output", "", "", "",
@@ -345,7 +376,7 @@ class apt_rx(gr.top_block, Qt.QWidget):
         if not True:
           self.qtgui_freq_sink_x_1.disable_legend()
         
-        if complex == type(float()):
+        if "complex" == "float" or "complex" == "msg_float":
           self.qtgui_freq_sink_x_1.set_plot_pos_half(not True)
         
         labels = ["Raw", "AGC Output", "", "", "",
@@ -373,8 +404,8 @@ class apt_rx(gr.top_block, Qt.QWidget):
         	1, processing_rate, 60e3, 15e3, firdes.WIN_HAMMING, 6.76))
         self.blocks_throttle_0 = blocks.throttle(gr.sizeof_gr_complex*1, processing_rate,True)
         self.blocks_float_to_complex_0 = blocks.float_to_complex(1)
-        self.blocks_file_source_0 = blocks.file_source(gr.sizeof_gr_complex*1, "/media/brian/Data/noaa18_s_rf.bin", False)
-        self.blocks_file_meta_sink_0 = blocks.file_meta_sink(gr.sizeof_float*1, "/home/brian/stem_station/noaa18_s_pb.dat", baud_rate, 1, blocks.GR_FILE_FLOAT, False, baud_rate * (60 * 20), "", True)
+        self.blocks_file_source_0 = blocks.file_source(gr.sizeof_gr_complex*1, "/Users/bjmclaug/Downloads/noaa-12_256k.dat", False)
+        self.blocks_file_meta_sink_0 = blocks.file_meta_sink(gr.sizeof_float*1, "/Users/bjmclaug/source/stem_station/noaa12_sample.dat", baud_rate, 1, blocks.GR_FILE_FLOAT, False, baud_rate * (60 * 20), "", True)
         self.blocks_file_meta_sink_0.set_unbuffered(False)
         self.blocks_complex_to_float_0 = blocks.complex_to_float(1)
         self.apt_am_demod_0 = apt_am_demod(
@@ -395,7 +426,7 @@ class apt_rx(gr.top_block, Qt.QWidget):
         self.connect((self.analog_rail_ff_0, 0), (self.blocks_float_to_complex_0, 0))    
         self.connect((self.analog_rail_ff_0_0, 0), (self.blocks_float_to_complex_0, 1))    
         self.connect((self.apt_am_demod_0, 0), (self.blocks_file_meta_sink_0, 0))    
-        self.connect((self.apt_am_demod_0, 1), (self.qtgui_freq_sink_x_1_0, 0))    
+        self.connect((self.apt_am_demod_0, 0), (self.qtgui_time_raster_sink_x_0, 0))    
         self.connect((self.apt_am_demod_0, 0), (self.qtgui_time_sink_x_0_0, 0))    
         self.connect((self.blocks_complex_to_float_0, 0), (self.analog_rail_ff_0, 0))    
         self.connect((self.blocks_complex_to_float_0, 1), (self.analog_rail_ff_0_0, 0))    
@@ -413,6 +444,7 @@ class apt_rx(gr.top_block, Qt.QWidget):
         self.settings = Qt.QSettings("GNU Radio", "apt_rx")
         self.settings.setValue("geometry", self.saveGeometry())
         event.accept()
+
 
     def get_satellite_select(self):
         return self.satellite_select
@@ -507,13 +539,13 @@ class apt_rx(gr.top_block, Qt.QWidget):
         with self._lock:
             self.processing_rate = processing_rate
             self.analog_quadrature_demod_cf_0.set_gain((self.processing_rate // 2)/(2*math.pi*self.fsk_deviation_hz/8.0))
-            self.apt_am_demod_0.set_parameter_samp_rate(self.processing_rate / 2)
-            self.blocks_throttle_0.set_sample_rate(self.processing_rate)
             self.low_pass_filter_0.set_taps(firdes.low_pass(1, self.processing_rate, 60e3, 15e3, firdes.WIN_HAMMING, 6.76))
             self.low_pass_filter_0_0.set_taps(firdes.low_pass(1, self.processing_rate // 2, self.fm_bandwidth + 1e3, 1e3, firdes.WIN_HAMMING, 6.76))
             self.qtgui_freq_sink_x_1.set_frequency_range(self.satellite_frequency, self.processing_rate // 2)
             self.qtgui_time_sink_x_0.set_samp_rate(self.processing_rate // 2)
             self.qtgui_waterfall_sink_x_0.set_frequency_range(self.satellite_frequency, self.processing_rate // 2)
+            self.apt_am_demod_0.set_parameter_samp_rate(self.processing_rate / 2)
+            self.blocks_throttle_0.set_sample_rate(self.processing_rate)
 
     def get_fm_bandwidth(self):
         return self.fm_bandwidth
@@ -530,16 +562,18 @@ class apt_rx(gr.top_block, Qt.QWidget):
         with self._lock:
             self.baud_rate = baud_rate
             self.qtgui_time_sink_x_0_0.set_samp_rate(self.baud_rate)
+            self.qtgui_time_raster_sink_x_0.set_num_cols(self.baud_rate // 2)
 
 
-if __name__ == '__main__':
-    parser = OptionParser(option_class=eng_option, usage="%prog: [options]")
-    (options, args) = parser.parse_args()
+def main(top_block_cls=apt_rx, options=None):
+
     from distutils.version import StrictVersion
     if StrictVersion(Qt.qVersion()) >= StrictVersion("4.5.0"):
-        Qt.QApplication.setGraphicsSystem(gr.prefs().get_string('qtgui','style','raster'))
+        style = gr.prefs().get_string('qtgui', 'style', 'raster')
+        Qt.QApplication.setGraphicsSystem(style)
     qapp = Qt.QApplication(sys.argv)
-    tb = apt_rx()
+
+    tb = top_block_cls()
     tb.start()
     tb.show()
 
@@ -548,4 +582,7 @@ if __name__ == '__main__':
         tb.wait()
     qapp.connect(qapp, Qt.SIGNAL("aboutToQuit()"), quitting)
     qapp.exec_()
-    tb = None  # to clean up Qt widgets
+
+
+if __name__ == '__main__':
+    main()

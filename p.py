@@ -5,7 +5,6 @@ import os.path
 import pmt
 import struct
 import sys
-import matplotlib.pyplot as plt
 
 from gnuradio.blocks import parse_file_metadata
 from PIL import Image, ImageOps
@@ -13,21 +12,21 @@ from itertools import izip_longest
 
 
 def grouper(n, iterable, fillvalue=None):
-    "grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx"
+    '''grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx'''
     args = [iter(iterable)] * n
     return izip_longest(fillvalue=fillvalue, *args)
 
-def map(x, in_min, in_max, out_min, out_max):
+def scale_pixels(pixels, in_min, in_max, out_min, out_max):
     in_min = float(in_min)
     in_max = float(in_max)
     out_min = float(out_min)
     out_max = float(out_max)
-    return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
-
-def npmax(l):
-    max_idx = np.argmax(l)
-    max_val = l[max_idx]
-    return (max_idx, max_val)
+    for i, line in enumerate(pixels):
+        line = np.clip(line, in_min, in_max)
+        line = [float(p) for p in line]
+        for j, pixel in enumerate(line):
+            pixels[i][j] = int(round((pixel - in_min) * (out_max - out_min) / (in_max - in_min) + out_min))
+    return pixels
 
 def process_tlm(tlm_strip):
     tlm = [int(round(sum(line)/len(line))) for line in tlm_strip]
@@ -38,7 +37,7 @@ def process_tlm(tlm_strip):
         else:
             difference = 0
         deltas.append(difference)
-    frame_center, _ = npmax(deltas)
+    frame_center = np.argmax(deltas)
     frame_start = frame_center - 64
     frame_end = frame_start + 128
     tlm_frame = tlm[frame_start:frame_end]
@@ -123,20 +122,13 @@ if spacecraft not in CAL_DATA:
     spacecraft = 'NOAA-19'
 
 has_header = os.path.isfile(header_file)
-first_sync = 0
-sync_len = 40
 syncs = []
-lines = []
 if has_header:
     print('Opening {}'.format(os.path.basename(args.input_file) + '.hdr'))
-    found_headers = 0
     debug = False
-    last_position = 0
     current_position = 0
-    ignore_next = False
     with open(header_file, 'rb') as handle:
         file_length = os.path.getsize(header_file)
-        double_length = 0
         while True:
 
             if (file_length - handle.tell()) < parse_file_metadata.HEADER_LENGTH:
@@ -150,7 +142,6 @@ if has_header:
                 sys.stderr.write('Could not deserialize header: invalid or corrupt data file.\n')
                 sys.exit(1)
 
-            found_headers += 1
             info = parse_file_metadata.parse_header(header, debug)
             if info['nbytes'] == 0:
                 break
@@ -169,11 +160,8 @@ if has_header:
                 extra_info = parse_file_metadata.parse_extra_dict(extra, info, debug)
 
             if 'SyncA' in info:
-                tmp_lines = info['nitems'] // 2080
-                extra_pixels = info['nitems'] % 2080
-                info['index'] = current_position - (39 + double_length)
+                info['index'] = current_position - 39
                 syncs.append(info)
-                double_lenth = 0
 
             current_position = current_position + info['nitems']
 
@@ -188,6 +176,7 @@ samples_found = len(raw_bytes) // BYTES_PER_FLOAT
 
 unpack_format = '<' + ('f' * samples_found)
 pixels = list(struct.unpack(unpack_format, raw_bytes))
+
 print('Finding Sync Signals')
 pre_syncs = []
 new_pixels = []
@@ -218,10 +207,8 @@ if len(syncs):
         pixels = pre_syncs + new_pixels
 
     if sync_ratio > 0.05:
-        # a_tlm = [line[tlm_frame_range['A'][0]:tlm_frame_range['A'][1]] for line in pixels[len(pre_syncs):len(pre_syncs)+last_sync]]
         a_tlm = [line[tlm_frame_range['A'][0]:tlm_frame_range['A'][1]] for line in pixels]
         a_tlm = [sum(line)/len(line) for line in a_tlm]
-        # b_tlm = [line[tlm_frame_range['B'][0]:tlm_frame_range['B'][1]] for line in pixels[len(pre_syncs):len(pre_syncs)+last_sync]]
         b_tlm = [line[tlm_frame_range['B'][0]:tlm_frame_range['B'][1]] for line in pixels]
         b_tlm = [sum(line)/len(line) for line in b_tlm]
         max_sample = max(max(a_tlm), max(b_tlm))
@@ -239,17 +226,12 @@ file_duration = datetime.timedelta(seconds = len(pixels) / 2)
 print('Capture Duration: {}'.format(file_duration))
 
 print('Scaling to 1-Byte Range')
-for i, line in enumerate(pixels):
-    line = np.clip(line, min_sample, max_sample)
-    line = [float(p) for p in line]
-    for j, pixel in enumerate(line):
-        pixels[i][j] = int(round(map(pixel, min_sample, max_sample, 0, 255)))
+pixels = scale_pixels(pixels, min_sample, max_sample, 0, 255)
 
 sync_ratio = len(syncs)/float(len(pixels))
 print('Syncs/Lines Ratio: {} / {} - {:.0f}%'.format(len(syncs), len(pixels), sync_ratio * 100))
 if len(syncs) and sync_ratio > 0.05:
     print('Processing Telemetry for {}'.format(spacecraft))
-    # a_tlm = [line[tlm_frame_range['A'][0]:tlm_frame_range['A'][1]] for line in pixels[len(pre_syncs):]]
     a_tlm = [line[tlm_frame_range['A'][0]:tlm_frame_range['A'][1]] for line in pixels]
     b_tlm = [line[tlm_frame_range['B'][0]:tlm_frame_range['B'][1]] for line in pixels]
     a_telemetry = process_tlm(a_tlm)
@@ -280,9 +262,6 @@ if len(syncs) and sync_ratio > 0.05:
     a_space = [sum(line)/len(line) for line in a_space]
     b_space = [line[space_mark_range['B'][0]+10:space_mark_range['B'][1]-7] for line in pixels]
     b_space = [sum(line)/len(line) for line in b_space]
-    # plt.plot(a_space)
-    # plt.plot(b_space)
-    # plt.show()
 
 raw_images = {}
 raw_images['F'] = pixels
