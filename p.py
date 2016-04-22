@@ -1,5 +1,6 @@
 import argparse
 import datetime
+import json
 import numpy as np
 import os.path
 import pmt
@@ -10,9 +11,26 @@ from gnuradio.blocks import parse_file_metadata
 from PIL import Image, ImageOps
 from itertools import izip_longest
 
-
+################################################################################
+# Function Definitions
+################################################################################
 def grouper(n, iterable, fillvalue=None):
-    '''grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx'''
+    '''Collect data into fixed-length chunks or blocks
+
+    Breaks a list (iterable) into groups of n. The last list is filled with
+    fillvalue to get to the n size if it is less than n. Sourced from:
+    https://docs.python.org/2/library/itertools.html
+
+    Args:
+        n: Number of items in each resultant list
+        iterable: List of items to break into smaller lists
+        fillevalue: Optional parameter defines fill items for final list
+
+    Returns:
+        A list of lists where the input list is broken into lists of length n.
+        For example:
+            grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx
+    '''
     args = [iter(iterable)] * n
     return izip_longest(fillvalue=fillvalue, *args)
 
@@ -45,66 +63,75 @@ def process_tlm(tlm_strip):
     return tlm_points
 
 def closest(val, l):
-    return min(range(len(l)), key=lambda i: abs(l[i]-val))
+    '''Determines the closest value from a list to a value
 
-AVHRR_CHANNELS = {1:['1', (0.58, 0.68), 'Visible', 'Daytime cloud and surface mapping'],
-                  2:['2', (0.73, 1.00), 'Near-IR', 'Land-water boundaries'],
-                  3:['3A', (1.58, 1.65), 'Near-IR', 'Snow and ice detection'],
-                  6:['3B', (3.55, 3.93), 'Near-IR', 'Night cloud mapping, sea surface temperature'],
-                  4:['4', (10.30, 11.30), 'Mid-IR', 'Night cloud mapping, sea surface temperature'],
-                  5:['5', (11.50, 12.50), 'Mid-IR', 'Sea surface temperature']}
+    Args:
+        val: Value to determine the closest to a value in l
+        l: List of values
 
-CAL_DATA = {'NOAA-12':{'a':[[276.597, 0.051275, 1.36e-06, 0.0, 0.0],
-                            [276.597, 0.051275, 1.36e-06, 0.0, 0.0],
-                            [276.597, 0.051275, 1.36e-06, 0.0, 0.0],
-                            [276.597, 0.051275, 1.36e-06, 0.0, 0.0]],
-                       'b':[0.25, 0.25, 0.25, 0.25]},
-            'NOAA-13':{'a':[[276.597, 0.051275, 1.36e-06, 0.0, 0.0],
-                            [276.597, 0.051275, 1.36e-06, 0.0, 0.0],
-                            [276.597, 0.051275, 1.36e-06, 0.0, 0.0],
-                            [276.597, 0.051275, 1.36e-06, 0.0, 0.0]],
-                       'b':[0.25, 0.25, 0.25, 0.25]},
-            'NOAA-15':{'a':[[276.60157, 0.051045, 1.36328e-06, 0.0, 0.0],
-                            [276.62531, 0.050909, 1.47266e-06, 0.0, 0.0],
-                            [276.67413, 0.050907, 1.47656e-06, 0.0, 0.0],
-                            [276.59258, 0.050906, 1.47656e-06, 0.0, 0.0]],
-                       'b':[0.25, 0.25, 0.25, 0.25]},
-            'NOAA-18':{'a':[[276.601, 0.05090, 1.657e-06, 0.0, 0.0],
-                            [276.683, 0.05101, 1.482e-06, 0.0, 0.0],
-                            [276.565, 0.05117, 1.313e-06, 0.0, 0.0],
-                            [276.615, 0.05103, 1.484e-06, 0.0, 0.0]],
-                       'b':[0.25, 0.25, 0.25, 0.25]},
-            'NOAA-19':{'a':[[276.6067, 0.051111, 1.405783e-06, 0.0, 0.0],
-                            [276.6119, 0.051090, 1.496037e-06, 0.0, 0.0],
-                            [276.6311, 0.051033, 1.496990e-06, 0.0, 0.0],
-                            [276.6268, 0.051058, 1.493110e-06, 0.0, 0.0]],
-                       'b':[0.25, 0.25, 0.25, 0.25]}}
+    Returns:
+        Value from l closest to val. For example:
+
+        closest(0.8, [0, 0.25, 0.5, 0.75, 1]) --> 0.75
+
+    Source: http://goo.gl/kPeY0x
+    '''
+    return np.abs(np.array(l)-val).argmin()
 
 def avhrr_prt_cal(x, a):
+    '''NOAA AVHRR PRT Calibration Formula
+
+    Args:
+        x: Raw counts value
+        a: PRT calibration table for a specific AVHRR
+
+    Returns:
+        Value of x as a temperature (Kelvin) for a specific AVHRR calibration
+        table provided in a.
+    '''
     return sum([a[j] * x ** j for j in range(0, 5)])
 
 def avhrr_bb_temp(T, b):
+    '''NOAA AVHRR Blackbody Calibration Formula
+
+    Args:
+        T: List of PRT temperatures
+        b: BB PRT weighting table for a specific AVHRR
+
+    Returns:
+        Returns a blackbody temperature (Kelvin) based on the calibrated
+        weighting for a specific AVHRR.
+    '''
     return sum([T[i] * b[i] for i in range(0, 4)])
 
-sync_width = 39
-space_mark_width = 47
-image_width = 909
-tlm_frame_width = 45
-full_channel_width = sync_width + space_mark_width + image_width + tlm_frame_width
-full_line_width = full_channel_width * 2
 
-sync_range = {'A':(0, sync_width),
-              'B':(full_channel_width, full_channel_width + sync_width)}
-space_mark_range = {'A':(sync_range['A'][1], sync_range['A'][1] + space_mark_width),
-                    'B':(sync_range['B'][1], sync_range['B'][1] + space_mark_width)}
-image_range = {'A':(space_mark_range['A'][1], space_mark_range['A'][1] + image_width),
-               'B':(space_mark_range['B'][1], space_mark_range['B'][1] + image_width)}
-tlm_frame_range = {'A':(image_range['A'][1], image_range['A'][1] + tlm_frame_width),
-                   'B':(image_range['B'][1], image_range['B'][1] + tlm_frame_width)}
+################################################################################
+# Define some constants and useful derived constants
+################################################################################
+PIXEL_MIN = 0
+PIXEL_MAX = 255
+SYNC_WIDTH = 39
+SPACE_MARK_WIDTH = 47
+IMAGE_WIDTH = 909
+TLM_FRAME_WIDTH = 45
+FULL_CHANNEL_WIDTH = SYNC_WIDTH + SPACE_MARK_WIDTH + IMAGE_WIDTH + TLM_FRAME_WIDTH
+FULL_LINE_WIDTH = FULL_CHANNEL_WIDTH * 2
+
+SYNC_RANGE = {'A':(0, SYNC_WIDTH),
+              'B':(FULL_CHANNEL_WIDTH, FULL_CHANNEL_WIDTH + SYNC_WIDTH)}
+SPACE_MARK_RANGE = {'A':(SYNC_RANGE['A'][1], SYNC_RANGE['A'][1] + SPACE_MARK_WIDTH),
+                    'B':(SYNC_RANGE['B'][1], SYNC_RANGE['B'][1] + SPACE_MARK_WIDTH)}
+IMAGE_RANGE = {'A':(SPACE_MARK_RANGE['A'][1], SPACE_MARK_RANGE['A'][1] + IMAGE_WIDTH),
+               'B':(SPACE_MARK_RANGE['B'][1], SPACE_MARK_RANGE['B'][1] + IMAGE_WIDTH)}
+TLM_FRAME_RANGE = {'A':(IMAGE_RANGE['A'][1], IMAGE_RANGE['A'][1] + TLM_FRAME_WIDTH),
+                   'B':(IMAGE_RANGE['B'][1], IMAGE_RANGE['B'][1] + TLM_FRAME_WIDTH)}
 
 BYTES_PER_FLOAT = 4
 GRAYSCALE = 'L'
 
+################################################################################
+# Parse CLI Arguments
+################################################################################
 parser = argparse.ArgumentParser()
 parser.add_argument('input_file', help='Raw APT demodulated data file')
 parser.add_argument('-s', '--spacecraft', default='NOAA-19', help='Spacecraft captured (for calibration)')
@@ -112,9 +139,15 @@ parser.add_argument('-d', '--direction', default='north', help='Pass to the \'no
 parser.add_argument('-a', '--all', action='store_true', default=False, help='Show all data lines, not just aligned')
 args = parser.parse_args()
 
-input_file_directory = os.path.dirname(args.input_file)
+input_file_directory = os.path.dirname(args.input_file) + '/'
 input_filename_base, _ = os.path.splitext(os.path.basename(args.input_file))
 header_file = input_file_directory + os.path.basename(args.input_file) + '.hdr'
+
+with open('calibration/avhrr.json') as avhrr_cal_json:
+    avhrr_cal = json.load(avhrr_cal_json)
+
+CAL_DATA = avhrr_cal['CAL_DATA']
+AVHRR_CHANNELS = avhrr_cal['AVHRR_CHANNELS']
 
 spacecraft = args.spacecraft
 if spacecraft not in CAL_DATA:
@@ -124,7 +157,7 @@ if spacecraft not in CAL_DATA:
 has_header = os.path.isfile(header_file)
 syncs = []
 if has_header:
-    print('Opening {}'.format(os.path.basename(args.input_file) + '.hdr'))
+    print('Opening {}'.format(header_file))
     debug = False
     current_position = 0
     with open(header_file, 'rb') as handle:
@@ -160,7 +193,7 @@ if has_header:
                 extra_info = parse_file_metadata.parse_extra_dict(extra, info, debug)
 
             if 'SyncA' in info:
-                info['index'] = current_position - 39
+                info['index'] = current_position - SYNC_WIDTH
                 syncs.append(info)
 
             current_position = current_position + info['nitems']
@@ -183,18 +216,19 @@ new_pixels = []
 sync_lines = []
 max_sample = 0
 min_sample = 0
+sync_ratio = 0
 
 if len(syncs):
     pre_syncs = pixels[0:syncs[0]['index']]
-    additional_pixels = 2080 - (len(pre_syncs) % 2080)
+    additional_pixels = FULL_LINE_WIDTH - (len(pre_syncs) % FULL_LINE_WIDTH)
     pre_syncs = ([0] * additional_pixels) + pre_syncs
-    pre_syncs = [list(line) for line in grouper(2080, pre_syncs, 0)]
+    pre_syncs = [list(line) for line in grouper(FULL_LINE_WIDTH, pre_syncs, 0)]
 
     i = 0
     for sync in syncs:
         sync_lines.append(i)
         pixel_set = pixels[sync['index']:sync['index'] + sync['nitems']]
-        pixel_set = [list(line) for line in grouper(2080, pixel_set, pixel_set[-1])]
+        pixel_set = [list(line) for line in grouper(FULL_LINE_WIDTH, pixel_set, pixel_set[-1])]
         if all(x == pixel_set[-1][0] for x in pixel_set[-1]):
             del pixel_set[-1]
         i += len(pixel_set)
@@ -207,9 +241,9 @@ if len(syncs):
         pixels = pre_syncs + new_pixels
 
     if sync_ratio > 0.05:
-        a_tlm = [line[tlm_frame_range['A'][0]:tlm_frame_range['A'][1]] for line in pixels]
+        a_tlm = [line[TLM_FRAME_RANGE['A'][0]:TLM_FRAME_RANGE['A'][1]] for line in pixels]
         a_tlm = [sum(line)/len(line) for line in a_tlm]
-        b_tlm = [line[tlm_frame_range['B'][0]:tlm_frame_range['B'][1]] for line in pixels]
+        b_tlm = [line[TLM_FRAME_RANGE['B'][0]:TLM_FRAME_RANGE['B'][1]] for line in pixels]
         b_tlm = [sum(line)/len(line) for line in b_tlm]
         max_sample = max(max(a_tlm), max(b_tlm))
         min_sample = min(min(a_tlm), min(b_tlm))
@@ -220,20 +254,20 @@ else:
     print('No Syncs Found - Minimal Processing')
     max_sample = max(pixels)
     min_sample = min(pixels)
-    pixels = [list(line) for line in grouper(2080, pixels, 0)]
+    pixels = [list(line) for line in grouper(FULL_LINE_WIDTH, pixels, 0)]
 
 file_duration = datetime.timedelta(seconds = len(pixels) / 2)
 print('Capture Duration: {}'.format(file_duration))
 
 print('Scaling to 1-Byte Range')
-pixels = scale_pixels(pixels, min_sample, max_sample, 0, 255)
+pixels = scale_pixels(pixels, min_sample, max_sample, PIXEL_MIN, PIXEL_MAX)
 
 sync_ratio = len(syncs)/float(len(pixels))
-print('Syncs/Lines Ratio: {} / {} - {:.0f}%'.format(len(syncs), len(pixels), sync_ratio * 100))
-if len(syncs) and sync_ratio > 0.05:
+
+if sync_ratio > 0.05:
     print('Processing Telemetry for {}'.format(spacecraft))
-    a_tlm = [line[tlm_frame_range['A'][0]:tlm_frame_range['A'][1]] for line in pixels]
-    b_tlm = [line[tlm_frame_range['B'][0]:tlm_frame_range['B'][1]] for line in pixels]
+    a_tlm = [line[TLM_FRAME_RANGE['A'][0]:TLM_FRAME_RANGE['A'][1]] for line in pixels]
+    b_tlm = [line[TLM_FRAME_RANGE['B'][0]:TLM_FRAME_RANGE['B'][1]] for line in pixels]
     a_telemetry = process_tlm(a_tlm)
     b_telemetry = process_tlm(b_tlm)
     unified_tlm = [sum(x)/2 for x in zip(a_telemetry[0:14], b_telemetry[0:14])]
@@ -242,39 +276,39 @@ if len(syncs) and sync_ratio > 0.05:
                  'a_channel':a_telemetry[15], 'b_bb':b_telemetry[14],
                  'b_channel':b_telemetry[15]}
 
-    telemetry['a_channel'] = closest(telemetry['a_channel'], telemetry['wedges']) + 1
-    telemetry['b_channel'] = closest(telemetry['b_channel'], telemetry['wedges']) + 1
+    telemetry['a_channel'] = closest(telemetry['a_channel'], telemetry['wedges'])
+    telemetry['b_channel'] = closest(telemetry['b_channel'], telemetry['wedges'])
     telemetry['prt_temps'] = [avhrr_prt_cal(telemetry['thermistors'][j], CAL_DATA[spacecraft]['a'][j]) for j in range(0, 4)]
     telemetry['bb_temp'] = avhrr_bb_temp(telemetry['prt_temps'], CAL_DATA[spacecraft]['b'])
+    a_info = AVHRR_CHANNELS[str(telemetry['a_channel'])]
+    b_info = AVHRR_CHANNELS[str(telemetry['b_channel'])]
+
     print('Image Information:')
-    a_info = AVHRR_CHANNELS[telemetry['a_channel']]
-    b_info = AVHRR_CHANNELS[telemetry['b_channel']]
-    print('     Frame A: AVHRR Channel {} - {} - {}'.format(a_info[0], a_info[2], a_info[3]))
-    print('     Frame B: AVHRR Channel {} - {} - {}'.format(b_info[0], b_info[2], b_info[3]))
+    print('     Frame A: AVHRR Channel {} - {} - {}'.format(a_info['channel_id'], a_info['type'], a_info['description']))
+    print('     Frame B: AVHRR Channel {} - {} - {}'.format(b_info['channel_id'], b_info['type'], b_info['description']))
     print('     Wedges: {}'.format(telemetry['wedges']))
-    print('     Zero Modulation Reference: {}'.format(telemetry['zero_mod']))
+    print('     Zero Mod Ref: {}'.format(telemetry['zero_mod']))
     print('     A Blackbody: {}'.format(telemetry['a_bb']))
     print('     B Blackbody: {}'.format(telemetry['b_bb']))
-    print('     Thermistors: {}'.format(telemetry['thermistors']))
-    print('     Thermistor Temps: {}'.format('  '.join(['{:.2f} K'.format(temp) for temp in telemetry['prt_temps']])))
-    print('     Blackbody Reference Temp (K): {:.2f} K'.format(telemetry['bb_temp']))
-    a_space = [line[space_mark_range['A'][0]+10:space_mark_range['A'][1]-7] for line in pixels]
-    a_space = [sum(line)/len(line) for line in a_space]
-    b_space = [line[space_mark_range['B'][0]+10:space_mark_range['B'][1]-7] for line in pixels]
-    b_space = [sum(line)/len(line) for line in b_space]
+    print('     PRTs (counts): {}'.format(' '.join(['{:<9}'.format(samp) for samp in telemetry['thermistors']])))
+    print('     PRTs (Kelvin): {}'.format('  '.join(['{:.2f} K'.format(temp) for temp in telemetry['prt_temps']])))
+    print('     Blackbody Ref Temp: {:.2f} K'.format(telemetry['bb_temp']))
+    print('Image Reception Quality:')
+    print('     Radiometric Resolution Loss: {:.2f}%'.format((1-((telemetry['wedges'][-1]-telemetry['zero_mod'])+1)/256.0)*100))
+    print('     Syncs/Lines Ratio: {} / {} - {:.0f}%'.format(len(syncs), len(pixels), sync_ratio * 100))
 
 raw_images = {}
 raw_images['F'] = pixels
 if len(syncs):
-    raw_images['A'] = [line[image_range['A'][0]:image_range['A'][1]] for line in pixels]
-    raw_images['B'] = [line[image_range['B'][0]:image_range['B'][1]] for line in pixels]
+    raw_images['A'] = [line[IMAGE_RANGE['A'][0]:IMAGE_RANGE['A'][1]] for line in pixels]
+    raw_images['B'] = [line[IMAGE_RANGE['B'][0]:IMAGE_RANGE['B'][1]] for line in pixels]
 
 for image in raw_images:
     lines = len(raw_images[image])
     width = len(raw_images[image][0])
     pixels = [item for sublist in raw_images[image] for item in sublist]
 
-    output_file = input_file_directory + 'output/' + input_filename_base + image + '.png'
+    output_file = input_file_directory + input_filename_base + image + '.png'
     image = Image.new(GRAYSCALE, (width, lines))
     image.putdata(pixels)
     if args.direction == 'north':
