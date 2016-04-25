@@ -313,25 +313,8 @@ if sync_ratio > 0.05:
                  'a_bb':a_telemetry[14], 'a_channel':a_telemetry[15], 'a_space':0,
                  'b_bb':b_telemetry[14], 'b_channel':b_telemetry[15], 'b_space':0}
 
-    # print(data_fit.intercept, data_fit.slope)
-    # telemetry['zero_mod'] = int(round((telemetry['zero_mod'] - data_fit.intercept) / data_fit.slope))
-    # print([int(round((wedge - data_fit.intercept) / data_fit.slope)) for wedge in telemetry['wedges']])
-    # print('Ideal:', ideal_curve[1:])
-    # print('Orig :', telemetry['wedges'])
-    # corr_temp = [int(round((wedge - data_fit.intercept) / data_fit.slope)) for wedge in telemetry['wedges']]
-    # print('Corr :', corr_temp)
-    # from itertools import izip
-    # print('I-O  :', [a - b for a, b in izip(ideal_curve[1:], telemetry['wedges'])])
-    # print('I-C  :', [a - b for a, b in izip(ideal_curve[1:], corr_temp)])
-    # telemetry['wedges'] = [int(round((wedge - data_fit.intercept) / data_fit.slope)-telemetry['zero_mod']) for wedge in telemetry['wedges']]
-    #
-    # telemetry['bb_thermistors'] = [int(round((prt - data_fit.intercept) / data_fit.slope)) for prt in telemetry['bb_thermistors']]
-    # telemetry['patch_thermistor'] = int(round((telemetry['patch_thermistor'] - data_fit.intercept) / data_fit.slope))
-    # telemetry['a_bb'] = int(round((telemetry['a_bb'] - data_fit.intercept) / data_fit.slope))
-    # telemetry['b_bb'] = int(round((telemetry['b_bb'] - data_fit.intercept) / data_fit.slope))
-
-    telemetry['a_channel'] = closest(telemetry['a_channel'], telemetry['wedges'])
-    telemetry['b_channel'] = closest(telemetry['b_channel'], telemetry['wedges'])
+    telemetry['a_channel'] = closest(telemetry['a_channel'], telemetry['wedges'])+1
+    telemetry['b_channel'] = closest(telemetry['b_channel'], telemetry['wedges'])+1
     telemetry['prt_temps'] = [avhrr_prt_cal(telemetry['bb_thermistors'][j], CAL_DATA[spacecraft]['a'][j]) for j in range(0, 4)]
     telemetry['bb_temp'] = avhrr_bb_temp(telemetry['prt_temps'], CAL_DATA[spacecraft]['b'])
     telemetry['patch_temp'] = (0.124 * telemetry['patch_thermistor']) + 90.113
@@ -348,8 +331,8 @@ if sync_ratio > 0.05:
     print('\tFrame B: AVHRR Channel {} - {} - {}'.format(b_info['channel_id'], b_info['type'], b_info['description']))
     print('\tWedges: {}'.format(telemetry['wedges']))
     print('\tZero Mod Ref: {}'.format(telemetry['zero_mod']))
-    print('\tA Blackbody/Space {} / {}'.format(telemetry['a_bb'], telemetry['a_space']))
-    print('\tB Blackbody/Space: {} / {}'.format(telemetry['b_bb'], telemetry['b_space']))
+    print('\tA Blackbody/Space: {:3} / {:3}'.format(telemetry['a_bb'], telemetry['a_space']))
+    print('\tB Blackbody/Space: {:3} / {:3}'.format(telemetry['b_bb'], telemetry['b_space']))
     print('\tPRTs (counts): {}'.format(' '.join(['{:<9.0f}'.format(samp) for samp in telemetry['bb_thermistors']])))
     print('\tPRTs (Kelvin): {}'.format('  '.join(['{:.2f} K'.format(temp) for temp in telemetry['prt_temps']])))
     print('\tBlackbody Ref Temp: {:.2f} K'.format(telemetry['bb_temp']))
