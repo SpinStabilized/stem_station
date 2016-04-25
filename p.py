@@ -1,9 +1,12 @@
+from __future__ import division
+
 import argparse
 import datetime
 import json
 import numpy as np
 import os.path
 import pmt
+import scipy.stats
 import struct
 import sys
 
@@ -62,6 +65,17 @@ def process_tlm(tlm_strip):
     tlm_points = [int(sum(point)/len(point)) for point in grouper(8, tlm_frame, tlm_frame[-1])]
     return tlm_points
 
+def space_view(space_mark_strip):
+    space_view_pixels = [pixel for line in space_mark_strip for pixel in line]
+    hist = np.histogram(space_view_pixels, bins=256)
+    hist_max = np.argmax(hist[0])
+    if hist_max > 127:
+        data = [pixel for pixel in space_view_pixels if pixel > 127]
+    else:
+        data = [pixel for pixel in space_view_pixels if pixel <= 127]
+    data_avg = int(round(np.mean(data)))
+    return data_avg
+
 def closest(val, l):
     '''Determines the closest value from a list to a value
 
@@ -78,7 +92,7 @@ def closest(val, l):
     '''
     return np.abs(np.array(l)-val).argmin()
 
-def avhrr_prt_cal(x, a):
+def avhrr_prt_cal(x, a, eight_bits=True):
     '''NOAA AVHRR PRT Calibration Formula
 
     Args:
@@ -89,6 +103,9 @@ def avhrr_prt_cal(x, a):
         Value of x as a temperature (Kelvin) for a specific AVHRR calibration
         table provided in a.
     '''
+    if eight_bits:
+        x = x * 4
+
     return sum([a[j] * x ** j for j in range(0, 5)])
 
 def avhrr_bb_temp(T, b):
@@ -154,6 +171,7 @@ if spacecraft not in CAL_DATA:
     print('Warning spacecraft {} not found in calibration data. Defaulting to NOAA-19'.format(spacecraft))
     spacecraft = 'NOAA-19'
 
+# Parse the header file to find the SyncA markers
 has_header = os.path.isfile(header_file)
 syncs = []
 if has_header:
@@ -265,37 +283,84 @@ pixels = scale_pixels(pixels, min_sample, max_sample, PIXEL_MIN, PIXEL_MAX)
 sync_ratio = len(syncs)/float(len(pixels))
 
 if sync_ratio > 0.05:
-    print('Processing Telemetry for {}'.format(spacecraft))
+    print('Initial Processing of Telemetry'.format(spacecraft))
     a_tlm = [line[TLM_FRAME_RANGE['A'][0]:TLM_FRAME_RANGE['A'][1]] for line in pixels]
     b_tlm = [line[TLM_FRAME_RANGE['B'][0]:TLM_FRAME_RANGE['B'][1]] for line in pixels]
     a_telemetry = process_tlm(a_tlm)
     b_telemetry = process_tlm(b_tlm)
-    unified_tlm = [sum(x)/2 for x in zip(a_telemetry[0:14], b_telemetry[0:14])]
+    unified_tlm = [int(round(sum(x)/2)) for x in zip(a_telemetry[0:14], b_telemetry[0:14])]
+    telemetry = {'wedges':unified_tlm[0:8], 'zero_mod':unified_tlm[8]}
+
+    # print([telemetry['zero_mod']] + telemetry['wedges'])
+    ideal_curve = [int(255 * (i / len(telemetry['wedges']))) for i in range(len(telemetry['wedges'])+ 1)]
+    data_fit = scipy.stats.linregress(ideal_curve, [telemetry['zero_mod']] + telemetry['wedges'])
+
+    print('Recalibrating based on calibration wedge data')
+    for i, line in enumerate(pixels):
+        for j, pixel in enumerate(line):
+            pixels[i][j] = int(round((pixel - data_fit.intercept) / data_fit.slope))
+
+    pixels = [np.clip(line, 0, 255) for line in pixels]
+
+    print('Reprocessing of Telemetry for {}'.format(spacecraft))
+    a_tlm = [line[TLM_FRAME_RANGE['A'][0]:TLM_FRAME_RANGE['A'][1]] for line in pixels]
+    b_tlm = [line[TLM_FRAME_RANGE['B'][0]:TLM_FRAME_RANGE['B'][1]] for line in pixels]
+    a_telemetry = process_tlm(a_tlm)
+    b_telemetry = process_tlm(b_tlm)
+    unified_tlm = [int(round(sum(x)/2)) for x in zip(a_telemetry[0:14], b_telemetry[0:14])]
     telemetry = {'wedges':unified_tlm[0:8], 'zero_mod':unified_tlm[8],
-                 'thermistors':unified_tlm[9:14], 'a_bb':a_telemetry[14],
-                 'a_channel':a_telemetry[15], 'b_bb':b_telemetry[14],
-                 'b_channel':b_telemetry[15]}
+                 'bb_thermistors':unified_tlm[9:13], 'patch_thermistor':unified_tlm[13],
+                 'a_bb':a_telemetry[14], 'a_channel':a_telemetry[15], 'a_space':0,
+                 'b_bb':b_telemetry[14], 'b_channel':b_telemetry[15], 'b_space':0}
+
+    # print(data_fit.intercept, data_fit.slope)
+    # telemetry['zero_mod'] = int(round((telemetry['zero_mod'] - data_fit.intercept) / data_fit.slope))
+    # print([int(round((wedge - data_fit.intercept) / data_fit.slope)) for wedge in telemetry['wedges']])
+    # print('Ideal:', ideal_curve[1:])
+    # print('Orig :', telemetry['wedges'])
+    # corr_temp = [int(round((wedge - data_fit.intercept) / data_fit.slope)) for wedge in telemetry['wedges']]
+    # print('Corr :', corr_temp)
+    # from itertools import izip
+    # print('I-O  :', [a - b for a, b in izip(ideal_curve[1:], telemetry['wedges'])])
+    # print('I-C  :', [a - b for a, b in izip(ideal_curve[1:], corr_temp)])
+    # telemetry['wedges'] = [int(round((wedge - data_fit.intercept) / data_fit.slope)-telemetry['zero_mod']) for wedge in telemetry['wedges']]
+    #
+    # telemetry['bb_thermistors'] = [int(round((prt - data_fit.intercept) / data_fit.slope)) for prt in telemetry['bb_thermistors']]
+    # telemetry['patch_thermistor'] = int(round((telemetry['patch_thermistor'] - data_fit.intercept) / data_fit.slope))
+    # telemetry['a_bb'] = int(round((telemetry['a_bb'] - data_fit.intercept) / data_fit.slope))
+    # telemetry['b_bb'] = int(round((telemetry['b_bb'] - data_fit.intercept) / data_fit.slope))
 
     telemetry['a_channel'] = closest(telemetry['a_channel'], telemetry['wedges'])
     telemetry['b_channel'] = closest(telemetry['b_channel'], telemetry['wedges'])
-    telemetry['prt_temps'] = [avhrr_prt_cal(telemetry['thermistors'][j], CAL_DATA[spacecraft]['a'][j]) for j in range(0, 4)]
+    telemetry['prt_temps'] = [avhrr_prt_cal(telemetry['bb_thermistors'][j], CAL_DATA[spacecraft]['a'][j]) for j in range(0, 4)]
     telemetry['bb_temp'] = avhrr_bb_temp(telemetry['prt_temps'], CAL_DATA[spacecraft]['b'])
+    telemetry['patch_temp'] = (0.124 * telemetry['patch_thermistor']) + 90.113
     a_info = AVHRR_CHANNELS[str(telemetry['a_channel'])]
     b_info = AVHRR_CHANNELS[str(telemetry['b_channel'])]
 
+    a_space_mark = [line[SPACE_MARK_RANGE['A'][0]:SPACE_MARK_RANGE['A'][1]] for line in pixels]
+    b_space_mark = [line[SPACE_MARK_RANGE['B'][0]:SPACE_MARK_RANGE['B'][1]] for line in pixels]
+    telemetry['a_space'] = space_view(a_space_mark)
+    telemetry['b_space'] = space_view(b_space_mark)
+
     print('Image Information:')
-    print('     Frame A: AVHRR Channel {} - {} - {}'.format(a_info['channel_id'], a_info['type'], a_info['description']))
-    print('     Frame B: AVHRR Channel {} - {} - {}'.format(b_info['channel_id'], b_info['type'], b_info['description']))
-    print('     Wedges: {}'.format(telemetry['wedges']))
-    print('     Zero Mod Ref: {}'.format(telemetry['zero_mod']))
-    print('     A Blackbody: {}'.format(telemetry['a_bb']))
-    print('     B Blackbody: {}'.format(telemetry['b_bb']))
-    print('     PRTs (counts): {}'.format(' '.join(['{:<9}'.format(samp) for samp in telemetry['thermistors']])))
-    print('     PRTs (Kelvin): {}'.format('  '.join(['{:.2f} K'.format(temp) for temp in telemetry['prt_temps']])))
-    print('     Blackbody Ref Temp: {:.2f} K'.format(telemetry['bb_temp']))
+    print('\tFrame A: AVHRR Channel {} - {} - {}'.format(a_info['channel_id'], a_info['type'], a_info['description']))
+    print('\tFrame B: AVHRR Channel {} - {} - {}'.format(b_info['channel_id'], b_info['type'], b_info['description']))
+    print('\tWedges: {}'.format(telemetry['wedges']))
+    print('\tZero Mod Ref: {}'.format(telemetry['zero_mod']))
+    print('\tA Blackbody/Space {} / {}'.format(telemetry['a_bb'], telemetry['a_space']))
+    print('\tB Blackbody/Space: {} / {}'.format(telemetry['b_bb'], telemetry['b_space']))
+    print('\tPRTs (counts): {}'.format(' '.join(['{:<9.0f}'.format(samp) for samp in telemetry['bb_thermistors']])))
+    print('\tPRTs (Kelvin): {}'.format('  '.join(['{:.2f} K'.format(temp) for temp in telemetry['prt_temps']])))
+    print('\tBlackbody Ref Temp: {:.2f} K'.format(telemetry['bb_temp']))
+    print('\tPatch Temp: {:.0f} cnts -- {:.2f} K'.format(telemetry['patch_thermistor'], telemetry['patch_temp']))
+
     print('Image Reception Quality:')
-    print('     Radiometric Resolution Loss: {:.2f}%'.format((1-((telemetry['wedges'][-1]-telemetry['zero_mod'])+1)/256.0)*100))
-    print('     Syncs/Lines Ratio: {} / {} - {:.0f}%'.format(len(syncs), len(pixels), sync_ratio * 100))
+    print('\tSyncs ({})/Lines ({}) Ratio: {:.2%}'.format(len(syncs), len(pixels), sync_ratio))
+    print('\tCalibration Linearity: {:.4%}'.format(data_fit.rvalue))
+
+    # print('Calibrating data to AVHRR original 8-bit counts')
+
 
 raw_images = {}
 raw_images['F'] = pixels
