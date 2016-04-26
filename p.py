@@ -1,6 +1,7 @@
 from __future__ import division
 
 import argparse
+import colorsys
 import datetime
 import json
 import numpy as np
@@ -291,7 +292,6 @@ if sync_ratio > 0.05:
     unified_tlm = [int(round(sum(x)/2)) for x in zip(a_telemetry[0:14], b_telemetry[0:14])]
     telemetry = {'wedges':unified_tlm[0:8], 'zero_mod':unified_tlm[8]}
 
-    # print([telemetry['zero_mod']] + telemetry['wedges'])
     ideal_curve = [int(255 * (i / len(telemetry['wedges']))) for i in range(len(telemetry['wedges'])+ 1)]
     data_fit = scipy.stats.linregress(ideal_curve, [telemetry['zero_mod']] + telemetry['wedges'])
 
@@ -347,20 +347,120 @@ if sync_ratio > 0.05:
 
 raw_images = {}
 raw_images['F'] = pixels
+
+def colorize(pixel_pair):
+    v, t = pixel_pair
+
+    Seathresold = 30.0
+    Landthresold = 90.0
+    Tthresold = 100.0
+    CloudTop = {'h':230, 's':0.2, 'v':0.3}
+    CloudBot = {'h':230, 's':0.0, 'v':1.0}
+    SeaTop = {'h':0.1, 's':0.7, 'v':0.6}
+    SeaBot = {'h':0.5, 's':0.6, 'v':0.4}
+    GroundTop = {'h':60, 's':0.6, 'v':0.2}
+    GroundBot = {'h':100, 's':0.1, 'v':0.5}
+
+    if t < Tthresold:
+        if v < Seathresold:
+            # Ocean color
+            top = SeaTop
+            bot = SeaBot
+            scv = v / Seathresold
+            sct = t / Tthresold
+        else:
+            # Ground Color
+            top = GroundTop
+            bot = GroundBot
+            scv = (v - Seathresold) / (Landthresold - Seathresold)
+            sct = t / Tthresold
+    else:
+        # Clouds
+        top = CloudTop
+        bot = CloudBot
+        scv = v / 255;
+        sct = t / 255;
+
+    c = {'h':0, 's':0, 'v':0}
+    c['s'] = top['s'] + sct * (bot['s'] - top['s']);
+    c['v'] = top['v'] + scv * (bot['v'] - top['v']);
+    c['h'] = top['h'] + scv * sct * (bot['h'] - top['h']);
+
+    rgb = colorsys.hsv_to_rgb(c['h'], c['s'], c['v'])
+    # rgb = tuple([int(round(i)) for i in rgb])
+    return tuple(rgb)
+
+
+
+
+
 if len(syncs):
     raw_images['A'] = [line[IMAGE_RANGE['A'][0]:IMAGE_RANGE['A'][1]] for line in pixels]
     raw_images['B'] = [line[IMAGE_RANGE['B'][0]:IMAGE_RANGE['B'][1]] for line in pixels]
 
-for image in raw_images:
-    lines = len(raw_images[image])
-    width = len(raw_images[image][0])
-    pixels = [item for sublist in raw_images[image] for item in sublist]
+    # raw_images['C'] = zip(raw_images['A'], raw_images['B'])
+    # for i, line_pair in enumerate(raw_images['C']):
+    #     raw_images['C'][i] = [a + b for a, b, in zip(line_pair[0], line_pair[1])]
 
-    output_file = input_file_directory + input_filename_base + image + '.png'
-    image = Image.new(GRAYSCALE, (width, lines))
+    # combined_max = max([max(line) for line in raw_images['C']])
+    # combined_min = min([min(line) for line in raw_images['C']])
+    # raw_images['C'] = scale_pixels(raw_images['C'], combined_min, combined_max, 0, 255)
+
+    print('Attempting to colorize')
+    raw_images['C'] = zip(raw_images['A'], raw_images['B'])
+    for i, line_pair in enumerate(raw_images['C']):
+        raw_images['C'][i] = zip(line_pair[0], line_pair[1])
+
+    for i, line in enumerate(raw_images['C']):
+        for j, pixel_pair in enumerate(line):
+            raw_images['C'][i][j] = colorize(pixel_pair)
+            raw_images['C'][i][j] = (int(round(raw_images['C'][i][j][0]*255)), int(round(raw_images['C'][i][j][1]*255)), int(round(raw_images['C'][i][j][2]*255)))
+
+    combined_max = max([max(pixel) for line in raw_images['C'] for pixel in line])
+    combined_min = min([min(pixel) for line in raw_images['C'] for pixel in line])
+    delta = combined_max - combined_min
+
+    for i, line in enumerate(raw_images['C']):
+        for j, pixel in enumerate(line):
+            pixel = [int(round((color_comp - combined_min) * 255 / delta)) for color_comp in list(pixel)]
+            raw_images['C'][i][j] = tuple(pixel)
+    # print(combined_min, combined_max)
+
+    # print(raw_images['C'][0][0])
+
+    # flat_raw_a = [pixel for line in raw_images['A'] for pixel in line]
+    # flat_raw_b = [pixel for line in raw_images['B'] for pixel in line]
+    # import matplotlib.pyplot as plt
+    #
+    # plt.figure(1)
+    # plt.subplot(211)
+    # plt.title('Histogram of Pixel Data - Channel A')
+    # plt.ylabel('Frequency')
+    # n_a, bins_a, patches_a = plt.hist(flat_raw_a, 256, facecolor='b')
+    # plt.subplot(212)
+    # n_b, bins_b, patches_b = plt.hist(flat_raw_b, 256, facecolor='r')
+    # plt.title('Histogram of Pixel Data - Channel B')
+    # plt.xlabel('Counts')
+    # plt.ylabel('Frequency')
+    # plt.subplot(211)
+    # plt.axis([0, 255, 0, max(max(n_a), max(n_b))*1.25])
+    # plt.subplot(212)
+    # plt.axis([0, 255, 0, max(max(n_a), max(n_b))*1.25])
+    # plt.show()
+
+for image_id in raw_images:
+    lines = len(raw_images[image_id])
+    width = len(raw_images[image_id][0])
+    pixels = [pixel for line in raw_images[image_id] for pixel in line]
+
+    output_file = input_file_directory + input_filename_base + image_id + '.png'
+    if image_id is 'C':
+        image = Image.new('RGB', (width, lines))
+    else:
+        image = Image.new(GRAYSCALE, (width, lines))
     image.putdata(pixels)
     if args.direction == 'north':
         image = image.rotate(180)
-    if not len(syncs):
+    if not len(syncs) or image_id is 'C':
         image = ImageOps.equalize(image)
     image.save(output_file)
