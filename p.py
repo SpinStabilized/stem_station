@@ -3,6 +3,7 @@ from __future__ import division
 import argparse
 import datetime
 import json
+import matplotlib.pyplot as plt
 import numpy as np
 import os.path
 import pmt
@@ -63,18 +64,37 @@ def process_tlm(tlm_strip):
     frame_end = frame_start + 128
     tlm_frame = tlm[frame_start:frame_end]
     tlm_points = [int(sum(point)/len(point)) for point in grouper(8, tlm_frame, tlm_frame[-1])]
-    return tlm_points
+    return tlm_points, tlm
+
+# def space_view(space_mark_strip):
+#     raw_strips = [int(round(sum(line)/len(line))) for line in space_mark_strip]
+#     space_view_pixels = [pixel for line in space_mark_strip for pixel in line]
+#     hist = np.histogram(space_view_pixels, bins=256)
+#     hist_max = np.argmax(hist[0])
+#     if hist_max > 127:
+#         data = [pixel for pixel in space_view_pixels if pixel > 127]
+#     else:
+#         data = [pixel for pixel in space_view_pixels if pixel <= 127]
+#     data_avg = int(round(np.mean(data)))
+#     return data_avg, raw_strips
 
 def space_view(space_mark_strip):
-    space_view_pixels = [pixel for line in space_mark_strip for pixel in line]
-    hist = np.histogram(space_view_pixels, bins=256)
+    raw_strips = [int(round(sum(line)/len(line))) for line in space_mark_strip]
+    # space_view_pixels = [pixel for line in space_mark_strip for pixel in line]
+    hist = np.histogram(raw_strips, bins=256)
     hist_max = np.argmax(hist[0])
     if hist_max > 127:
-        data = [pixel for pixel in space_view_pixels if pixel > 127]
+        data = raw_strips
+        for i, point in enumerate(data):
+            if point < 127 and i is not 0:
+                data[i] = data[i-1]
     else:
-        data = [pixel for pixel in space_view_pixels if pixel <= 127]
+        data = raw_strips
+        for i, point in enumerate(data):
+            if point > 127 and i is not 0:
+                data[i] = data[i-1]
     data_avg = int(round(np.mean(data)))
-    return data_avg
+    return data_avg, data
 
 def closest(val, l):
     '''Determines the closest value from a list to a value
@@ -121,6 +141,14 @@ def avhrr_bb_temp(T, b):
     '''
     return sum([T[i] * b[i] for i in range(0, 4)])
 
+def moving_average(l, window_size, pad=True):
+    smoothed = list(np.convolve(l, np.ones((window_size,))/window_size, mode='valid')[(window_size-1):])
+
+    if pad:
+        pad_data = [smoothed[0]] * ((window_size-1) * 2)
+        smoothed = pad_data + smoothed
+
+    return smoothed
 
 ################################################################################
 # Define some constants and useful derived constants
@@ -286,14 +314,14 @@ if sync_ratio > 0.05:
     print('Initial Processing of Telemetry'.format(spacecraft))
     a_tlm = [line[TLM_FRAME_RANGE['A'][0]:TLM_FRAME_RANGE['A'][1]] for line in pixels]
     b_tlm = [line[TLM_FRAME_RANGE['B'][0]:TLM_FRAME_RANGE['B'][1]] for line in pixels]
-    a_telemetry = process_tlm(a_tlm)
-    b_telemetry = process_tlm(b_tlm)
+    a_telemetry, _ = process_tlm(a_tlm)
+    b_telemetry, _ = process_tlm(b_tlm)
     unified_tlm = [int(round(sum(x)/2)) for x in zip(a_telemetry[0:14], b_telemetry[0:14])]
     telemetry = {'wedges':unified_tlm[0:8], 'zero_mod':unified_tlm[8]}
 
-    # print([telemetry['zero_mod']] + telemetry['wedges'])
     ideal_curve = [int(255 * (i / len(telemetry['wedges']))) for i in range(len(telemetry['wedges'])+ 1)]
-    data_fit = scipy.stats.linregress(ideal_curve, [telemetry['zero_mod']] + telemetry['wedges'])
+    initial_curve = [telemetry['zero_mod']] + telemetry['wedges']
+    data_fit = scipy.stats.linregress(ideal_curve, initial_curve)
 
     print('Recalibrating based on calibration wedge data')
     for i, line in enumerate(pixels):
@@ -305,14 +333,15 @@ if sync_ratio > 0.05:
     print('Reprocessing of Telemetry for {}'.format(spacecraft))
     a_tlm = [line[TLM_FRAME_RANGE['A'][0]:TLM_FRAME_RANGE['A'][1]] for line in pixels]
     b_tlm = [line[TLM_FRAME_RANGE['B'][0]:TLM_FRAME_RANGE['B'][1]] for line in pixels]
-    a_telemetry = process_tlm(a_tlm)
-    b_telemetry = process_tlm(b_tlm)
+    a_telemetry, tlm_a_strip = process_tlm(a_tlm)
+    b_telemetry, tlm_b_strip = process_tlm(b_tlm)
     unified_tlm = [int(round(sum(x)/2)) for x in zip(a_telemetry[0:14], b_telemetry[0:14])]
     telemetry = {'wedges':unified_tlm[0:8], 'zero_mod':unified_tlm[8],
                  'bb_thermistors':unified_tlm[9:13], 'patch_thermistor':unified_tlm[13],
                  'a_bb':a_telemetry[14], 'a_channel':a_telemetry[15], 'a_space':0,
                  'b_bb':b_telemetry[14], 'b_channel':b_telemetry[15], 'b_space':0}
 
+    calibrated_curve = [telemetry['zero_mod']] + telemetry['wedges']
     telemetry['a_channel'] = closest(telemetry['a_channel'], telemetry['wedges'])+1
     telemetry['b_channel'] = closest(telemetry['b_channel'], telemetry['wedges'])+1
     telemetry['prt_temps'] = [avhrr_prt_cal(telemetry['bb_thermistors'][j], CAL_DATA[spacecraft]['a'][j]) for j in range(0, 4)]
@@ -323,8 +352,8 @@ if sync_ratio > 0.05:
 
     a_space_mark = [line[SPACE_MARK_RANGE['A'][0]:SPACE_MARK_RANGE['A'][1]] for line in pixels]
     b_space_mark = [line[SPACE_MARK_RANGE['B'][0]:SPACE_MARK_RANGE['B'][1]] for line in pixels]
-    telemetry['a_space'] = space_view(a_space_mark)
-    telemetry['b_space'] = space_view(b_space_mark)
+    telemetry['a_space'], raw_a_space_mark_strip = space_view(a_space_mark)
+    telemetry['b_space'], raw_b_space_mark_strip = space_view(b_space_mark)
 
     print('Image Information:')
     print('\tFrame A: AVHRR Channel {} - {} - {}'.format(a_info['channel_id'], a_info['type'], a_info['description']))
@@ -342,8 +371,47 @@ if sync_ratio > 0.05:
     print('\tSyncs ({})/Lines ({}) Ratio: {:.2%}'.format(len(syncs), len(pixels), sync_ratio))
     print('\tCalibration Linearity: {:.4%}'.format(data_fit.rvalue))
 
-    # print('Calibrating data to AVHRR original 8-bit counts')
+    print('Generating Calibration Curve Plots')
+    plt.figure(0)
+    handle_ideal, = plt.plot(ideal_curve, ideal_curve, 'g-', label='Ideal')
+    handle_initial, _ = plt.plot(ideal_curve, initial_curve, 'r-', ideal_curve, initial_curve, 'r^', label='Inital')
+    # plt.plot(ideal_curve, initial_curve, 'r^')
+    handle_calibrated, _ = plt.plot(ideal_curve, calibrated_curve, 'b-', ideal_curve, calibrated_curve, 'bo', label='Calibrated')
+    # plt.plot(ideal_curve, calibrated_curve, 'bo')
+    plt.axis([0, 255, 0, 255])
+    plt.xlabel('Ideal Curve Points')
+    plt.ylabel('Found Curve Points')
+    plt.title('Analog to Digital Calibration Curve Analysis')
+    plt.legend(handles=[handle_ideal, handle_initial, handle_calibrated], loc=4)
+    plt.savefig(input_file_directory + 'plot_cal_curves.png')
+    # plt.show()
 
+    print('Generating Plot of Raw Telemetry Strips')
+    plt.figure(1)
+    plt.axis([0, max(len(tlm_a_strip), len(tlm_b_strip)), 0, 255])
+    plt.xlabel('Image Line')
+    plt.ylabel('Counts')
+    plt.title('Telemetry Strips')
+    plt.plot(tlm_a_strip, 'g', label='Channel A')
+    plt.plot(tlm_b_strip, 'b', label='Channel B')
+    plt.savefig(input_file_directory + 'plot_tlm_strips.png')
+    # plt.show()
+
+    print('Generating Plot of Space View')
+    plt.figure(2)
+    plt.axis([0, max(len(tlm_a_strip), len(tlm_b_strip)), 0, 255])
+    plt.xlabel('Image Line')
+    plt.ylabel('Counts')
+    plt.title('Space View Strips')
+    raw_a_space_smoothed = moving_average(raw_a_space_mark_strip, 30)
+    raw_b_space_smoothed = moving_average(raw_b_space_mark_strip, 30)
+    plt.plot(raw_a_space_mark_strip, 'g', label='Channel A')
+    plt.plot(raw_a_space_smoothed, 'r--')
+    plt.plot(raw_b_space_mark_strip, 'b', label='Channel B')
+    plt.plot(raw_b_space_smoothed, 'r--')
+    plt.legend(loc='center right')
+    plt.savefig(input_file_directory + 'plot_space_view.png')
+    # plt.show()
 
 raw_images = {}
 raw_images['F'] = pixels
