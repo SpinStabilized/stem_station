@@ -38,16 +38,30 @@ def grouper(n, iterable, fillvalue=None):
     args = [iter(iterable)] * n
     return izip_longest(fillvalue=fillvalue, *args)
 
-def scale_pixels(pixels, in_min, in_max, out_min, out_max):
-    in_min = float(in_min)
-    in_max = float(in_max)
-    out_min = float(out_min)
-    out_max = float(out_max)
+# def scale_pixels(pixels, in_min, in_max, out_min, out_max):
+#     in_min = float(in_min)
+#     in_max = float(in_max)
+#     out_min = float(out_min)
+#     out_max = float(out_max)
+#     for i, line in enumerate(pixels):
+#         line = np.clip(line, in_min, in_max)
+#         line = [float(p) for p in line]
+#         for j, pixel in enumerate(line):
+#             pixels[i][j] = (pixel - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
+#             pixels[i][j] = int(round(pixels[i][j]))
+#     return pixels
+
+def scale_pixels(pixels, out_min=0, out_max=255):
+    in_max = max([max(line) for line in pixels])
+    in_min = min([min(line) for line in pixels])
     for i, line in enumerate(pixels):
-        line = np.clip(line, in_min, in_max)
-        line = [float(p) for p in line]
         for j, pixel in enumerate(line):
-            pixels[i][j] = int(round((pixel - in_min) * (out_max - out_min) / (in_max - in_min) + out_min))
+            pixels[i][j] = (pixel - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
+
+            pixels[i][j] = int(round(pixels[i][j]))
+    # out_max = max([max(line) for line in pixels])
+    # out_min = min([min(line) for line in pixels])
+    # print('{}-{} -- {}-{}'.format(in_min, in_max, out_min, out_max))
     return pixels
 
 def process_tlm(tlm_strip):
@@ -64,6 +78,22 @@ def process_tlm(tlm_strip):
     frame_end = frame_start + 128
     tlm_frame = tlm[frame_start:frame_end]
     tlm_points = [int(sum(point)/len(point)) for point in grouper(8, tlm_frame, tlm_frame[-1])]
+    return tlm_points, tlm
+
+def process_tlm2(tlm_strip):
+    tlm = [sum(line)/len(line) for line in tlm_strip]
+    deltas = []
+    for i, point in enumerate(tlm):
+        if i != 0:
+            difference = abs(tlm[i] - tlm[i-1])
+        else:
+            difference = 0
+        deltas.append(difference)
+    frame_center = np.argmax(deltas)
+    frame_start = frame_center - 64
+    frame_end = frame_start + 128
+    tlm_frame = tlm[frame_start:frame_end]
+    tlm_points = [sum(point)/len(point) for point in grouper(8, tlm_frame, tlm_frame[-1])]
     return tlm_points, tlm
 
 # def space_view(space_mark_strip):
@@ -256,15 +286,16 @@ samples_found = len(raw_bytes) // BYTES_PER_FLOAT
 unpack_format = '<' + ('f' * samples_found)
 pixels = list(struct.unpack(unpack_format, raw_bytes))
 
+file_duration = datetime.timedelta(seconds = len(pixels) / (FULL_LINE_WIDTH * 2))
+print('Capture Duration: {}'.format(file_duration))
+
 print('Finding Sync Signals')
-pre_syncs = []
-new_pixels = []
-sync_lines = []
-max_sample = 0
-min_sample = 0
 sync_ratio = 0
 
 if len(syncs):
+    pre_syncs = []
+    new_pixels = []
+    sync_lines = []
     pre_syncs = pixels[0:syncs[0]['index']]
     additional_pixels = FULL_LINE_WIDTH - (len(pre_syncs) % FULL_LINE_WIDTH)
     pre_syncs = ([0] * additional_pixels) + pre_syncs
@@ -286,49 +317,27 @@ if len(syncs):
     if args.all:
         pixels = pre_syncs + new_pixels
 
-    if sync_ratio > 0.05:
-        a_tlm = [line[TLM_FRAME_RANGE['A'][0]:TLM_FRAME_RANGE['A'][1]] for line in pixels]
-        a_tlm = [sum(line)/len(line) for line in a_tlm]
-        b_tlm = [line[TLM_FRAME_RANGE['B'][0]:TLM_FRAME_RANGE['B'][1]] for line in pixels]
-        b_tlm = [sum(line)/len(line) for line in b_tlm]
-        max_sample = max(max(a_tlm), max(b_tlm))
-        min_sample = min(min(a_tlm), min(b_tlm))
-    else:
-        max_sample = max([max(line) for line in pixels])
-        min_sample = min([min(line) for line in pixels])
 else:
     print('No Syncs Found - Minimal Processing')
-    max_sample = max(pixels)
-    min_sample = min(pixels)
     pixels = [list(line) for line in grouper(FULL_LINE_WIDTH, pixels, 0)]
+    pixels = scale_pixels(pixels)
 
-file_duration = datetime.timedelta(seconds = len(pixels) / 2)
-print('Capture Duration: {}'.format(file_duration))
 
-print('Scaling to 1-Byte Range')
-pixels = scale_pixels(pixels, min_sample, max_sample, PIXEL_MIN, PIXEL_MAX)
 
 sync_ratio = len(syncs)/float(len(pixels))
 
 if sync_ratio > 0.05:
-    print('Initial Processing of Telemetry'.format(spacecraft))
+    print('Telemetry Processing - Find Digital Range From Wedges'.format(spacecraft))
     a_tlm = [line[TLM_FRAME_RANGE['A'][0]:TLM_FRAME_RANGE['A'][1]] for line in pixels]
     b_tlm = [line[TLM_FRAME_RANGE['B'][0]:TLM_FRAME_RANGE['B'][1]] for line in pixels]
-    a_telemetry, _ = process_tlm(a_tlm)
-    b_telemetry, _ = process_tlm(b_tlm)
-    unified_tlm = [int(round(sum(x)/2)) for x in zip(a_telemetry[0:14], b_telemetry[0:14])]
+    a_telemetry, _ = process_tlm2(a_tlm)
+    b_telemetry, _ = process_tlm2(b_tlm)
+    unified_tlm = [sum(x)/2 for x in zip(a_telemetry[0:14], b_telemetry[0:14])]
     telemetry = {'wedges':unified_tlm[0:8], 'zero_mod':unified_tlm[8]}
 
-    ideal_curve = [int(255 * (i / len(telemetry['wedges']))) for i in range(len(telemetry['wedges'])+ 1)]
-    initial_curve = [telemetry['zero_mod']] + telemetry['wedges']
-    data_fit = scipy.stats.linregress(ideal_curve, initial_curve)
-
-    print('Recalibrating based on calibration wedge data')
-    for i, line in enumerate(pixels):
-        for j, pixel in enumerate(line):
-            pixels[i][j] = int(round((pixel - data_fit.intercept) / data_fit.slope))
-
-    pixels = [np.clip(line, 0, 255) for line in pixels]
+    print('Scaling to wedge calibration')
+    pixels = [np.clip(line, telemetry['zero_mod'], telemetry['wedges'][-1]) for line in pixels]
+    pixels = scale_pixels(pixels)
 
     print('Reprocessing of Telemetry for {}'.format(spacecraft))
     a_tlm = [line[TLM_FRAME_RANGE['A'][0]:TLM_FRAME_RANGE['A'][1]] for line in pixels]
@@ -341,7 +350,9 @@ if sync_ratio > 0.05:
                  'a_bb':a_telemetry[14], 'a_channel':a_telemetry[15], 'a_space':0,
                  'b_bb':b_telemetry[14], 'b_channel':b_telemetry[15], 'b_space':0}
 
-    calibrated_curve = [telemetry['zero_mod']] + telemetry['wedges']
+    ideal_curve = [int(255 * (i / len(telemetry['wedges']))) for i in range(len(telemetry['wedges'])+ 1)]
+    initial_curve = [telemetry['zero_mod']] + telemetry['wedges']
+    data_fit = scipy.stats.linregress(ideal_curve, initial_curve)
     telemetry['a_channel'] = closest(telemetry['a_channel'], telemetry['wedges'])+1
     telemetry['b_channel'] = closest(telemetry['b_channel'], telemetry['wedges'])+1
     telemetry['prt_temps'] = [avhrr_prt_cal(telemetry['bb_thermistors'][j], CAL_DATA[spacecraft]['a'][j]) for j in range(0, 4)]
@@ -372,26 +383,41 @@ if sync_ratio > 0.05:
     print('\tCalibration Linearity: {:.4%}'.format(data_fit.rvalue))
 
     print('Generating Calibration Curve Plots')
-    plt.figure(0)
-    plt.style.use('dark_background')
+    # plt.style.use('dark_background')
+    plt.suptitle(spacecraft, fontsize=15, fontweight='bold')
+
+    plt.figure(0, figsize=(8.5, 11))
+    plt.suptitle(spacecraft, fontsize=15, fontweight='bold')
+    # plt.subplot(411)
+    plt.subplot2grid((3,2), (0,1))
     handle_ideal, = plt.plot(ideal_curve, ideal_curve, 'g-', label='Ideal')
-    handle_initial, _ = plt.plot(ideal_curve, initial_curve, 'r-', ideal_curve, initial_curve, 'r^', label='Inital')
-    # plt.plot(ideal_curve, initial_curve, 'r^')
-    handle_calibrated, _ = plt.plot(ideal_curve, calibrated_curve, 'b-', ideal_curve, calibrated_curve, 'bo', label='Calibrated')
-    # plt.plot(ideal_curve, calibrated_curve, 'bo')
+    handle_initial, _ = plt.plot(ideal_curve, initial_curve, 'r-', ideal_curve, initial_curve, 'r^', label='Received')
     plt.axis([0, 255, 0, 255])
     plt.xlabel('Ideal Curve Points')
-    plt.ylabel('Found Curve Points')
-    plt.title('Analog to Digital Calibration Curve Analysis')
-    plt.legend(handles=[handle_ideal, handle_initial, handle_calibrated], loc=4)
+    plt.ylabel('Received Curve Points')
+    plt.title('Analog to Digital Cal Curve')
+    plt.legend(handles=[handle_ideal, handle_initial], loc=4)
     plt.grid(b=True, which='major', color='grey', linestyle='--')
     plt.xticks(ideal_curve)
     plt.yticks(ideal_curve)
-    plt.savefig(input_file_directory + 'plot_cal_curves.png')
-    # plt.show()
+    # plt.savefig(input_file_directory + 'plot_cal_curves.png')
+
+    # print('Generating Telemetry Text-Only Plot')
+    # plt.figure(3, figsize=(10, 5))
+    # plt.subplot(412)
+    plt.subplot2grid((3,2), (0,0))
+    plt.axis('off')
+    plt.text(0, 0.95, 'Frame A: AVHRR Channel {} - {} - {}'.format(a_info['channel_id'], a_info['type'], a_info['description']))
+    plt.text(0, 0.90, 'Frame B: AVHRR Channel {} - {} - {}'.format(b_info['channel_id'], b_info['type'], b_info['description']))
+    plt.text(0, 0.85, 'PRTs: {}'.format('  '.join(['{:.2f} K'.format(temp) for temp in telemetry['prt_temps']])))
+    plt.text(0, 0.80, 'Blackbody Ref Temp: {:.2f} K'.format(telemetry['bb_temp']))
+    plt.text(0, 0.75, 'Patch Temp: {:.2f} K'.format(telemetry['patch_temp']))
+
 
     print('Generating Plot of Raw Telemetry Strips')
-    plt.figure(1, figsize=(12, 5))
+    # plt.figure(1, figsize=(12, 5))
+    # plt.subplot(413)
+    plt.subplot2grid((3,2), (1,0), colspan=2)
     plt.axis([0, max(len(tlm_a_strip), len(tlm_b_strip)), 0, 255])
     plt.xlabel('Line Number')
     plt.ylabel('Counts')
@@ -401,11 +427,12 @@ if sync_ratio > 0.05:
     plt.grid(b=True, which='major', color='grey', linestyle='--')
     plt.xticks(np.arange(0, len(tlm_a_strip), 16*8))
     plt.yticks(ideal_curve)
-    plt.savefig(input_file_directory + 'plot_tlm_strips.png')
-    # plt.show()
+    # plt.savefig(input_file_directory + 'plot_tlm_strips.png')
 
     print('Generating Plot of Space View')
-    plt.figure(2, figsize=(12, 5))
+    # plt.figure(2, figsize=(12, 5))
+    # plt.subplot(414)
+    plt.subplot2grid((3,2), (2,0), colspan=2)
     plt.axis([0, max(len(tlm_a_strip), len(tlm_b_strip)), 0, 255])
     plt.xlabel('Line Number')
     plt.ylabel('Counts')
@@ -420,8 +447,10 @@ if sync_ratio > 0.05:
     plt.xticks(np.arange(0, len(tlm_a_strip), 16*8))
     plt.yticks(ideal_curve)
     plt.grid(b=True, which='major', color='grey', linestyle='--')
-    plt.savefig(input_file_directory + 'plot_space_view.png')
-    # plt.show()
+    # plt.savefig(input_file_directory + 'plot_space_view.png')
+    plt.savefig(input_file_directory + 'plot_telemetry.png')
+# else:
+
 
 raw_images = {}
 raw_images['F'] = pixels
