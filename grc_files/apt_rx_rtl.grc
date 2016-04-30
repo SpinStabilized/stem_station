@@ -271,6 +271,69 @@
     </param>
   </block>
   <block>
+    <key>variable_qtgui_range</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>value</key>
+      <value>47</value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(368, 3)</value>
+    </param>
+    <param>
+      <key>gui_hint</key>
+      <value>0, 2, 1, 1</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>range_ppm_corr</value>
+    </param>
+    <param>
+      <key>label</key>
+      <value>PPM Correction</value>
+    </param>
+    <param>
+      <key>min_len</key>
+      <value>200</value>
+    </param>
+    <param>
+      <key>orient</key>
+      <value>Qt.Horizontal</value>
+    </param>
+    <param>
+      <key>start</key>
+      <value>-50</value>
+    </param>
+    <param>
+      <key>step</key>
+      <value>1</value>
+    </param>
+    <param>
+      <key>stop</key>
+      <value>50</value>
+    </param>
+    <param>
+      <key>rangeType</key>
+      <value>int</value>
+    </param>
+    <param>
+      <key>widget</key>
+      <value>counter_slider</value>
+    </param>
+  </block>
+  <block>
     <key>variable_qtgui_chooser</key>
     <param>
       <key>comment</key>
@@ -278,7 +341,7 @@
     </param>
     <param>
       <key>value</key>
-      <value>valid_gains[-1]</value>
+      <value>valid_gains[-8]</value>
     </param>
     <param>
       <key>_enabled</key>
@@ -898,7 +961,11 @@
     </param>
     <param>
       <key>file</key>
+<<<<<<< HEAD
+      <value>/home/brian/stem_station/noaa12_samp.dat</value>
+=======
       <value>/Users/bjmclaug/source/stem_station/noaa12_sample.dat</value>
+>>>>>>> 20ad13f19ba9093bbce86c8937193ed191681361
     </param>
     <param>
       <key>_coordinate</key>
@@ -957,19 +1024,19 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>0</value>
+      <value>1</value>
     </param>
     <param>
       <key>file</key>
-      <value>/home/brian/stem_station/noaa18_s_rf.bin</value>
+      <value>/home/brian/stem_station/noaa18_rf2.bin</value>
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(784, 235)</value>
+      <value>(88, 555)</value>
     </param>
     <param>
       <key>_rotation</key>
-      <value>0</value>
+      <value>180</value>
     </param>
     <param>
       <key>id</key>
@@ -1008,7 +1075,11 @@
     </param>
     <param>
       <key>file</key>
+<<<<<<< HEAD
+      <value>/home/brian/Downloads/noaa-12_256k.dat</value>
+=======
       <value>/Users/bjmclaug/Downloads/noaa-12_256k.dat</value>
+>>>>>>> 20ad13f19ba9093bbce86c8937193ed191681361
     </param>
     <param>
       <key>_coordinate</key>
@@ -1169,7 +1240,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(688, 107)</value>
+      <value>(816, 91)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -3110,8 +3181,13 @@
       <value>0</value>
     </param>
     <param>
+<<<<<<< HEAD
+      <key>corr0</key>
+      <value>range_ppm_corr</value>
+=======
       <key>_coordinate</key>
       <value>(416, 115)</value>
+>>>>>>> 20ad13f19ba9093bbce86c8937193ed191681361
     </param>
     <param>
       <key>_rotation</key>
@@ -3130,8 +3206,13 @@
       <value></value>
     </param>
     <param>
+<<<<<<< HEAD
+      <key>gain0</key>
+      <value>rf_gain</value>
+=======
       <key>ant1</key>
       <value></value>
+>>>>>>> 20ad13f19ba9093bbce86c8937193ed191681361
     </param>
     <param>
       <key>ant10</key>
@@ -4442,8 +4523,13 @@
       <value>0</value>
     </param>
     <param>
+<<<<<<< HEAD
+      <key>_coordinate</key>
+      <value>(568, 91)</value>
+=======
       <key>maxoutbuf</key>
       <value>0</value>
+>>>>>>> 20ad13f19ba9093bbce86c8937193ed191681361
     </param>
     <param>
       <key>minoutbuf</key>
@@ -4518,7 +4604,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(624, 11)</value>
+      <value>(952, 11)</value>
     </param>
     <param>
       <key>gui_hint</key>
@@ -4633,7 +4719,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(488, 11)</value>
+      <value>(800, 3)</value>
     </param>
     <param>
       <key>gui_hint</key>
@@ -4748,7 +4834,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(352, 11)</value>
+      <value>(664, 3)</value>
     </param>
     <param>
       <key>gui_hint</key>
@@ -4913,7 +4999,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(0, 435)</value>
+      <value>(0, 395)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -5002,12 +5088,6 @@
   </connection>
   <connection>
     <source_block_id>freq_xlating_fir_filter_xxx_0</source_block_id>
-    <sink_block_id>blocks_file_sink_0</sink_block_id>
-    <source_key>0</source_key>
-    <sink_key>0</sink_key>
-  </connection>
-  <connection>
-    <source_block_id>freq_xlating_fir_filter_xxx_0</source_block_id>
     <sink_block_id>virtual_sink_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
@@ -5015,6 +5095,12 @@
   <connection>
     <source_block_id>low_pass_filter_0</source_block_id>
     <sink_block_id>analog_agc3_xx_0</sink_block_id>
+    <source_key>0</source_key>
+    <sink_key>0</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>low_pass_filter_0</source_block_id>
+    <sink_block_id>blocks_file_sink_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>
