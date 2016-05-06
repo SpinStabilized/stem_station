@@ -38,19 +38,6 @@ def grouper(n, iterable, fillvalue=None):
     args = [iter(iterable)] * n
     return izip_longest(fillvalue=fillvalue, *args)
 
-# def scale_pixels(pixels, in_min, in_max, out_min, out_max):
-#     in_min = float(in_min)
-#     in_max = float(in_max)
-#     out_min = float(out_min)
-#     out_max = float(out_max)
-#     for i, line in enumerate(pixels):
-#         line = np.clip(line, in_min, in_max)
-#         line = [float(p) for p in line]
-#         for j, pixel in enumerate(line):
-#             pixels[i][j] = (pixel - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
-#             pixels[i][j] = int(round(pixels[i][j]))
-#     return pixels
-
 def scale_pixels(pixels, out_min=0, out_max=255):
     in_max = max([max(line) for line in pixels])
     in_min = min([min(line) for line in pixels])
@@ -59,9 +46,7 @@ def scale_pixels(pixels, out_min=0, out_max=255):
             pixels[i][j] = (pixel - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
 
             pixels[i][j] = int(round(pixels[i][j]))
-    # out_max = max([max(line) for line in pixels])
-    # out_min = min([min(line) for line in pixels])
-    # print('{}-{} -- {}-{}'.format(in_min, in_max, out_min, out_max))
+
     return pixels
 
 def process_tlm(tlm_strip):
@@ -81,6 +66,8 @@ def process_tlm(tlm_strip):
     return tlm_points, tlm
 
 def process_tlm2(tlm_strip):
+    # plt.imshow(tlm_strip)
+    # plt.show()
     tlm = [sum(line)/len(line) for line in tlm_strip]
     deltas = []
     for i, point in enumerate(tlm):
@@ -95,18 +82,6 @@ def process_tlm2(tlm_strip):
     tlm_frame = tlm[frame_start:frame_end]
     tlm_points = [sum(point)/len(point) for point in grouper(8, tlm_frame, tlm_frame[-1])]
     return tlm_points, tlm
-
-# def space_view(space_mark_strip):
-#     raw_strips = [int(round(sum(line)/len(line))) for line in space_mark_strip]
-#     space_view_pixels = [pixel for line in space_mark_strip for pixel in line]
-#     hist = np.histogram(space_view_pixels, bins=256)
-#     hist_max = np.argmax(hist[0])
-#     if hist_max > 127:
-#         data = [pixel for pixel in space_view_pixels if pixel > 127]
-#     else:
-#         data = [pixel for pixel in space_view_pixels if pixel <= 127]
-#     data_avg = int(round(np.mean(data)))
-#     return data_avg, raw_strips
 
 def space_view(space_mark_strip):
     raw_strips = [int(round(sum(line)/len(line))) for line in space_mark_strip]
@@ -180,6 +155,58 @@ def moving_average(l, window_size, pad=True):
 
     return smoothed
 
+def parse_gnuradio_header(header_file, verbose=False):
+    headers = []
+    index = 0
+    rx_time = datetime.timedelta(seconds = 0)
+    with open(header_file, 'rb') as handle:
+        file_length = os.path.getsize(header_file)
+        while True:
+            if file_length - handle.tell() < parse_file_metadata.HEADER_LENGTH:
+                break
+
+            header_str = handle.read(parse_file_metadata.HEADER_LENGTH)
+
+            try:
+                header = pmt.deserialize_str(header_str)
+            except RuntimeError:
+                break
+
+            info = parse_file_metadata.parse_header(header, verbose)
+
+            if info['nbytes'] == 0:
+                break
+
+            if(info['extra_len'] > 0):
+                extra_str = handle.read(info['extra_len'])
+                if(len(extra_str) == 0):
+                    break
+
+                try:
+                    extra = pmt.deserialize_str(extra_str)
+                except RuntimeError:
+                    break
+
+                parse_file_metadata.parse_extra_dict(extra, info, verbose)
+
+
+            if len(headers) > 0:
+                last_rx_time = headers[-1]['rx_time']
+                samples_delta = headers[-1]['nitems'] / headers[-1]['rx_rate']
+                samples_delta = datetime.timedelta(seconds=samples_delta)
+                info['rx_time'] = last_rx_time + samples_delta
+
+                info['index'] = index
+                index = index + info['nitems']
+            else:
+                info['rx_time'] = datetime.timedelta(seconds=0.0)
+                info['index'] = 0
+                index = info['nitems']
+
+            headers.append(info)
+
+    return headers
+
 ################################################################################
 # Define some constants and useful derived constants
 ################################################################################
@@ -234,48 +261,66 @@ has_header = os.path.isfile(header_file)
 syncs = []
 if has_header:
     print('Opening {}'.format(header_file))
-    debug = False
-    current_position = 0
-    with open(header_file, 'rb') as handle:
-        file_length = os.path.getsize(header_file)
-        while True:
 
-            if (file_length - handle.tell()) < parse_file_metadata.HEADER_LENGTH:
-                break
-
-            header_str = handle.read(parse_file_metadata.HEADER_LENGTH)
-
-            try:
-                header = pmt.deserialize_str(header_str)
-            except RuntimeError:
-                sys.stderr.write('Could not deserialize header: invalid or corrupt data file.\n')
-                sys.exit(1)
-
-            info = parse_file_metadata.parse_header(header, debug)
-            if info['nbytes'] == 0:
-                break
-
-            if(info['extra_len'] > 0):
-                extra_str = handle.read(info['extra_len'])
-                if(len(extra_str) == 0):
-                    break
-
-                try:
-                    extra = pmt.deserialize_str(extra_str)
-                except RuntimeError:
-                    sys.stderr.write('Could not deserialize extras: invalid or corrupt data file.\n')
-                    sys.exit(1)
-
-                extra_info = parse_file_metadata.parse_extra_dict(extra, info, debug)
-
-            if 'SyncA' in info:
-                info['index'] = current_position - SYNC_WIDTH
-                syncs.append(info)
-
-            current_position = current_position + info['nitems']
+    headers = parse_gnuradio_header(header_file)
+    start = datetime.datetime.now()
+    # time_marks = [start + header['rx_time'] for header in headers]
+    # for mark in time_marks:
+    #     print mark
+    last_rx_time = headers[-1]['rx_time']
+    samples_delta = headers[-1]['nitems'] / headers[-1]['rx_rate']
+    samples_delta = datetime.timedelta(seconds=samples_delta)
+    end = start + (last_rx_time + samples_delta)
+    capture_duration = end - start
+    # print 'Capture Start:    {}'.format(start)
+    # print 'Capture Finish:   {}'.format(end)
+    # print 'Capture Duration: {}'.format(end - start)
+    syncs = headers
+    # debug = False
+    # current_position = 0
+    # with open(header_file, 'rb') as handle:
+    #     file_length = os.path.getsize(header_file)
+    #     while True:
+    #
+    #         if (file_length - handle.tell()) < parse_file_metadata.HEADER_LENGTH:
+    #             break
+    #
+    #         header_str = handle.read(parse_file_metadata.HEADER_LENGTH)
+    #
+    #         try:
+    #             header = pmt.deserialize_str(header_str)
+    #         except RuntimeError:
+    #             sys.stderr.write('Could not deserialize header: invalid or corrupt data file.\n')
+    #             sys.exit(1)
+    #
+    #         info = parse_file_metadata.parse_header(header, debug)
+    #         if info['nbytes'] == 0:
+    #             break
+    #
+    #         if(info['extra_len'] > 0):
+    #             extra_str = handle.read(info['extra_len'])
+    #             if(len(extra_str) == 0):
+    #                 break
+    #
+    #             try:
+    #                 extra = pmt.deserialize_str(extra_str)
+    #             except RuntimeError:
+    #                 sys.stderr.write('Could not deserialize extras: invalid or corrupt data file.\n')
+    #                 sys.exit(1)
+    #
+    #             extra_info = parse_file_metadata.parse_extra_dict(extra, info, debug)
+    #
+    #         if 'SyncA' in info:
+    #             info['index'] = current_position - SYNC_WIDTH
+    #             syncs.append(info)
+    #
+    #         current_position = current_position + info['nitems']
 
 else:
     print('No Header File Found - Raw Processing')
+
+# sys.exit(1)
+
 
 print('Opening {}'.format(args.input_file))
 with open(args.input_file, 'rb') as raw_data:
@@ -287,16 +332,21 @@ unpack_format = '<' + ('f' * samples_found)
 pixels = list(struct.unpack(unpack_format, raw_bytes))
 
 file_duration = datetime.timedelta(seconds = len(pixels) / (FULL_LINE_WIDTH * 2))
-print('Capture Duration: {}'.format(file_duration))
+print('Capture Duration: {}'.format(capture_duration))
 
-print('Finding Sync Signals')
+print('Aligning Sync Signals')
 sync_ratio = 0
 
 if len(syncs):
     pre_syncs = []
     new_pixels = []
     sync_lines = []
-    pre_syncs = pixels[0:syncs[0]['index']]
+    # print syncs[1]
+    # print next(header for header in syncs if 'SyncA' in header)
+    first_sync = next(header for header in syncs if 'SyncA' in header)
+    print first_sync
+    pre_syncs = pixels[0:first_sync['index']]
+    # pre_syncs = pixels[0:syncs[0]['index']]
     additional_pixels = FULL_LINE_WIDTH - (len(pre_syncs) % FULL_LINE_WIDTH)
     pre_syncs = ([0] * additional_pixels) + pre_syncs
     pre_syncs = [list(line) for line in grouper(FULL_LINE_WIDTH, pre_syncs, 0)]
@@ -323,11 +373,12 @@ else:
     pixels = scale_pixels(pixels)
 
 
-
+plt.imshow(pixels)
+plt.show()
 sync_ratio = len(syncs)/float(len(pixels))
 
 if sync_ratio > 0.05:
-    print('Telemetry Processing - Find Digital Range From Wedges'.format(spacecraft))
+    print('Telemetry Processing - Find Analog to Digital Range From Wedges'.format(spacecraft))
     a_tlm = [line[TLM_FRAME_RANGE['A'][0]:TLM_FRAME_RANGE['A'][1]] for line in pixels]
     b_tlm = [line[TLM_FRAME_RANGE['B'][0]:TLM_FRAME_RANGE['B'][1]] for line in pixels]
     a_telemetry, _ = process_tlm2(a_tlm)
